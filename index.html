@@ -5,94 +5,102 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AGV 3D Monitor</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; background: #1e1e1e; color: #d4d4d4; }
+        .app { display: flex; height: 100vh; }
+        .sidebar {
+            width: 300px;
+            min-width: 260px;
+            background: #252526;
+            border-right: 1px solid #3c3c3c;
+            display: flex;
+            flex-direction: column;
             overflow: hidden;
-            background: #1a1a1a;
         }
-
-        #container {
-            width: 100vw;
-            height: 100vh;
-            position: relative;
+        .sidebar-header {
+            padding: 16px;
+            background: #2d2d30;
+            border-bottom: 1px solid #3c3c3c;
+            font-size: 15px;
+            font-weight: 600;
+            color: #fff;
         }
-
-        #info {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            background: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 15px 20px;
-            border-radius: 8px;
-            z-index: 100;
-            font-size: 14px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+        .sidebar-content { flex: 1; overflow-y: auto; padding: 8px 0; }
+        .panel {
+            border-bottom: 1px solid #3c3c3c;
         }
-
-        #info h2 {
-            margin-bottom: 10px;
-            color: #4CAF50;
-        }
-
-        #info p {
-            margin: 5px 0;
-        }
-
-        #controls {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 15px 20px;
-            border-radius: 8px;
-            z-index: 100;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        #controls button {
-            background: #4CAF50;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            margin: 5px;
-            border-radius: 4px;
+        .panel-header {
+            padding: 10px 14px;
             cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            background: #2d2d30;
+            color: #ccc;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .panel-header:hover { background: #3c3c3c; color: #fff; }
+        .panel-header::after { content: '▼'; font-size: 10px; opacity: 0.7; }
+        .panel.open .panel-header::after { content: '▲'; }
+        .panel-body { padding: 10px 14px; background: #252526; display: none; }
+        .panel.open .panel-body { display: block; }
+        .form-row { margin-bottom: 10px; }
+        .form-row:last-child { margin-bottom: 0; }
+        .form-label { display: block; font-size: 11px; color: #9d9d9d; margin-bottom: 4px; }
+        .form-label + select,
+        .form-label + input[type="range"] { width: 100%; }
+        select {
+            width: 100%;
+            padding: 6px 8px;
+            background: #3c3c3c;
+            border: 1px solid #555;
+            color: #d4d4d4;
+            
             font-size: 12px;
-            transition: background 0.3s;
         }
-
-        #controls button:hover {
-            background: #45a049;
+        select:focus { outline: none; border-color: #007acc; }
+        .btn {
+            display: inline-block;
+            padding: 6px 12px;
+            margin: 2px 4px 2px 0;
+            background: #0e639c;
+            color: #fff;
+            border: none;
+            
+            font-size: 12px;
+            cursor: pointer;
         }
-
-        #controls button:active {
-            background: #3d8b40;
+        .btn:hover { background: #1177bb; }
+        .btn-secondary { background: #3c3c3c; }
+        .btn-secondary:hover { background: #505050; }
+        .btn-danger { background: #c5282c; }
+        .btn-danger:hover { background: #e03e42; }
+        .btn-success { background: #16825d; }
+        .btn-success:hover { background: #1a9d6b; }
+        .checkbox-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+        .checkbox-row input[type="checkbox"] { width: 16px; height: 16px; accent-color: #0e639c; cursor: pointer; }
+        .main { flex: 1; position: relative; min-width: 0; }
+        #container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        .status-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 4px 12px;
+            background: rgba(0,0,0,0.6);
+            font-size: 11px;
+            color: #9d9d9d;
+            display: flex;
+            gap: 16px;
         }
-
-        #controls button.toggle {
-            background: #2196F3;
-        }
-
-        #controls button.toggle:hover {
-            background: #1976D2;
-        }
-
         .agv-label {
             position: absolute;
             background: rgba(0, 0, 0, 0.8);
             color: white;
             padding: 4px 8px;
-            border-radius: 4px;
+            
             font-size: 11px;
             pointer-events: none;
             white-space: nowrap;
@@ -101,10 +109,19 @@
     </style>
 </head>
 <body>
-    <div id="container"></div>
-    <div id="info">
-        <h2>AGV 3D Monitor</h2>
-        <p>AGV đang hoạt động: <span id="activeCount">0</span></p>
+    <div class="app">
+        <aside class="sidebar">
+            <div class="sidebar-header">AGV 3D Studio</div>
+            <div class="sidebar-content" id="sidebarContent"></div>
+        </aside>
+        <main class="main">
+            <div id="container"></div>
+            <div class="status-bar">
+                <span>AGV: <strong id="activeCount">0</strong></span>
+                <span id="statusPath">Path: 0</span>
+                <span id="statusFloor">Tầng: 1</span>
+            </div>
+        </main>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -149,11 +166,16 @@
             checkLoaders();
         }, 1000);
 
-        // Camera - tạo cả Orthographic và Perspective
-        const aspect = window.innerWidth / window.innerHeight;
+        // Kích thước vùng 3D (dùng cho camera aspect, tránh bị cắt khi có sidebar)
+        function getViewSize() {
+            const el = document.querySelector('.main') || document.getElementById('container');
+            return el ? { w: el.clientWidth || window.innerWidth, h: el.clientHeight || window.innerHeight } : { w: window.innerWidth, h: window.innerHeight };
+        }
+        const viewSizePx = getViewSize();
+        const aspect = viewSizePx.w / Math.max(1, viewSizePx.h);
         const viewSize = 100;
         
-        // OrthographicCamera
+        // OrthographicCamera (aspect theo vùng 3D, không dùng toàn màn hình)
         const orthographicCamera = new THREE.OrthographicCamera(
             -viewSize * aspect,
             viewSize * aspect,
@@ -179,14 +201,31 @@
         let camera = orthographicCamera;
         let isOrthographic = true;
 
-        // Renderer
+        // Renderer (kích thước theo vùng 3D .main khi dùng layout desktop)
         const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
+        const initialSize = getViewSize();
+        renderer.setSize(initialSize.w, initialSize.h);
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         document.getElementById('container').appendChild(renderer.domElement);
 
-        // Controls
+        // Raycaster + mouse (dùng cho click/chọn khối và control point)
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        function setMouseFromEvent(event) {
+            const rect = renderer.domElement.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+        }
+        // Chỉ chạy khi đang tạo path — không ảnh hưởng hành vi chọn/kéo khối khi không tạo path
+        let _onControlPointMouseDown = null;
+        renderer.domElement.addEventListener('mousedown', function (e) {
+            if (isCreatingPath && _onControlPointMouseDown) _onControlPointMouseDown(e);
+        }, true);
+        renderer.domElement.addEventListener('pointerdown', function (e) {
+            if (isCreatingPath && _onControlPointMouseDown) _onControlPointMouseDown(e);
+        }, true);
+
         let controls = new THREE.OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = 0.05;
@@ -205,21 +244,19 @@
             isOrthographic = !isOrthographic;
             
             if (isOrthographic) {
-                // Chuyển sang OrthographicCamera
                 camera = orthographicCamera;
-                // Cập nhật kích thước view dựa trên zoom
-                const aspect = window.innerWidth / window.innerHeight;
-                const viewSize = currentZoom * 0.5; // Scale viewSize dựa trên distance
+                const vs = getViewSize();
+                const aspect = vs.w / Math.max(1, vs.h);
+                const viewSize = currentZoom * 0.5;
                 orthographicCamera.left = -viewSize * aspect;
                 orthographicCamera.right = viewSize * aspect;
                 orthographicCamera.top = viewSize;
                 orthographicCamera.bottom = -viewSize;
                 orthographicCamera.updateProjectionMatrix();
             } else {
-                // Chuyển sang PerspectiveCamera
                 camera = perspectiveCamera;
-                const aspect = window.innerWidth / window.innerHeight;
-                perspectiveCamera.aspect = aspect;
+                const vs = getViewSize();
+                perspectiveCamera.aspect = vs.w / Math.max(1, vs.h);
                 perspectiveCamera.updateProjectionMatrix();
             }
             
@@ -305,12 +342,64 @@
                         selectedAGV.currentX = curvePos.x;
                         selectedAGV.currentZ = curvePos.z;
                         
-                        // Lưu góc xoay hiện tại sau khi chỉnh sửa
-                        selectedAGV.rotationY = selectedAGV.group.rotation.y;
-                        selectedAGV.hasCustomRotation = true; // Đánh dấu có góc xoay tùy chỉnh
+                        // Tính góc xoay từ path tại vị trí hiện tại
+                        const tangent = selectedAGV.curve.getTangentAt(nearestT);
+                        const pathRotation = Math.atan2(tangent.x, tangent.z);
+                        
+                        // Tính góc offset = góc xoay hiện tại - góc xoay từ path
+                        const currentRotation = selectedAGV.group.rotation.y;
+                        selectedAGV.rotationOffset = currentRotation - pathRotation;
+                    }
+                }
+                
+                // Xử lý control point khi đang tạo path
+                if (isCreatingPath && selectedControlPoint) {
+                    if (!event.value) {
+                        const marker = transformControls.object;
+                        if (marker && marker.userData) {
+                            const segmentIndex = selectedControlPoint.segmentIndex;
+                            const cpType = selectedControlPoint.controlPoint;
+                            
+                            if (newPathControlPoints[segmentIndex] && newPathControlPoints[segmentIndex][cpType]) {
+                                newPathControlPoints[segmentIndex][cpType].x = marker.position.x;
+                                newPathControlPoints[segmentIndex][cpType].z = marker.position.z;
+                                updateNewPathPreview();
+                            }
+                            justReleasedFromControlPointDrag = true;
+                            transformControls.detach();
+                            selectedControlPoint = null;
+                            // Không bật OrbitControls ở đây — giữ tắt trong suốt lúc tạo path để click cp2 không xoay camera
+                        }
                     }
                 }
             });
+            
+            // Lắng nghe sự kiện objectChange để cập nhật real-time khi kéo
+            transformControls.addEventListener('objectChange', () => {
+                if (isCreatingPath && selectedControlPoint) {
+                    const marker = transformControls.object;
+                    if (marker && marker.userData) {
+                        const segmentIndex = selectedControlPoint.segmentIndex;
+                        const cpType = selectedControlPoint.controlPoint;
+                        
+                        // Giữ Y cố định (chỉ di chuyển trên mặt phẳng)
+                        marker.position.y = 0.6;
+                        
+                        if (newPathControlPoints[segmentIndex] && newPathControlPoints[segmentIndex][cpType]) {
+                            // Cập nhật control point real-time
+                            newPathControlPoints[segmentIndex][cpType].x = marker.position.x;
+                            newPathControlPoints[segmentIndex][cpType].z = marker.position.z;
+                            
+                            // Cập nhật preview
+                            updateNewPathPreview();
+                            
+                            // Cập nhật lại các đường nối control points
+                            updateControlPointLines(segmentIndex);
+                        }
+                    }
+                }
+            });
+            
             scene.add(transformControls);
         }
         
@@ -770,27 +859,39 @@
         // Khởi tạo TransformControls
         initTransformControls();
         
-        // Xử lý click để chọn khối
-        const raycaster = new THREE.Raycaster();
-        const mouse = new THREE.Vector2();
-        
+        // Xử lý click để chọn khối (raycaster, mouse, setMouseFromEvent đã khai báo trước OrbitControls)
         function onMouseClick(event) {
-            // Chỉ xử lý khi không có khối nào đang được kéo
             if (transformControls.dragging) return;
             
-            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-            
+            setMouseFromEvent(event);
             raycaster.setFromCamera(mouse, camera);
             
-            // Nếu đang tạo path, raycast vào floor để lấy điểm
             if (isCreatingPath && event.button === 0) {
-                // Raycast vào một plane ở y = 0
+                // Ưu tiên: nếu click vào control point thì chỉ return (đã chọn trong onMouseDown), không tạo waypoint
+                if (newPathControlPointMarkers) {
+                    scene.updateMatrixWorld(true);
+                    const allHits = raycaster.intersectObject(newPathControlPointMarkers, true);
+                    const controlPointHit = allHits.find(hr => hr.object.isMesh && hr.object.userData && hr.object.userData.controlPoint);
+                    if (controlPointHit) {
+                        justReleasedFromControlPointDrag = false; // Cho phép lần click sau chọn control point khác
+                        return;
+                    }
+                }
+                // Vừa thả sau khi kéo control point và giờ click vào floor → không tạo waypoint
+                if (justReleasedFromControlPointDrag) {
+                    justReleasedFromControlPointDrag = false;
+                    return;
+                }
+                
+                // Click vào floor để thêm waypoint — bỏ chọn control point trước (giữ OrbitControls tắt đến khi Hủy/Hoàn thành path)
+                if (selectedControlPoint && transformControls && transformControls.object) {
+                    transformControls.detach();
+                    selectedControlPoint = null;
+                }
+                
                 const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
                 const intersectPoint = new THREE.Vector3();
                 raycaster.ray.intersectPlane(plane, intersectPoint);
-                
-                // Kiểm tra xem điểm có trong phạm vi floor không
                 if (Math.abs(intersectPoint.x) <= 100 && Math.abs(intersectPoint.z) <= 100) {
                     handlePathCreationClick(intersectPoint);
                 }
@@ -872,6 +973,73 @@
         }
         
         renderer.domElement.addEventListener('click', onMouseClick);
+        
+        // Xử lý hover và drag control points
+        let isDraggingControlPoint = false;
+        
+        function onMouseMove(event) {
+            if (!isCreatingPath || !newPathControlPointMarkers) {
+                renderer.domElement.style.cursor = 'default';
+                return;
+            }
+            
+            setMouseFromEvent(event);
+            scene.updateMatrixWorld(true);
+            raycaster.setFromCamera(mouse, camera);
+            
+            if (selectedControlPoint) {
+                renderer.domElement.style.cursor = 'move';
+                return;
+            }
+            const allHits = raycaster.intersectObject(newPathControlPointMarkers, true);
+            const overControlPoint = allHits.some(hr => hr.object.isMesh && hr.object.userData && hr.object.userData.controlPoint);
+            if (overControlPoint) {
+                renderer.domElement.style.cursor = 'pointer';
+                return;
+            }
+            renderer.domElement.style.cursor = isCreatingPath ? 'crosshair' : 'default';
+        }
+        
+        function onMouseDown(event) {
+            if (!isCreatingPath || !newPathControlPointMarkers || event.button !== 0) return;
+            
+            setMouseFromEvent(event);
+            scene.updateMatrixWorld(true);
+            raycaster.setFromCamera(mouse, camera);
+            // Raycast vào cả group (recursive), lấy hit đầu tiên là mesh có userData.controlPoint
+            const allIntersects = raycaster.intersectObject(newPathControlPointMarkers, true);
+            const controlPointHit = allIntersects.find(hr => hr.object.isMesh && hr.object.userData && hr.object.userData.controlPoint);
+            
+            if (controlPointHit) {
+                const clickedObject = controlPointHit.object;
+                event.preventDefault();
+                isDraggingControlPoint = true;
+                if (transformControls && transformControls.object !== clickedObject) {
+                    transformControls.detach();
+                }
+                selectedControlPoint = {
+                    segmentIndex: clickedObject.userData.segmentIndex,
+                    controlPoint: clickedObject.userData.controlPoint
+                };
+                if (transformControls) {
+                    transformControls.attach(clickedObject);
+                }
+                if (controls) controls.enabled = false; // Tắt OrbitControls khi đang kéo control point
+            }
+        }
+        
+        function onMouseUp(event) {
+            if (event.button === 0) {
+                if (isDraggingControlPoint) justReleasedFromControlPointDrag = true; // Vừa kéo control point → click sau không tạo waypoint
+                isDraggingControlPoint = false;
+            }
+        }
+        
+        let justReleasedFromControlPointDrag = false;
+        _onControlPointMouseDown = onMouseDown;
+
+        renderer.domElement.addEventListener('mousemove', onMouseMove);
+        renderer.domElement.addEventListener('mouseup', onMouseUp);
 
         // Helper functions để giảm boilerplate
         const Helpers = {
@@ -925,104 +1093,164 @@
         pointLight.position.set(-50, 30, -50);
         scene.add(pointLight);
 
-        // Create floor/map
-        const floorSize = 200;
-        const floorGeometry = new THREE.PlaneGeometry(floorSize, floorSize);
+        // Building: khi mới vào chỉ 1 tầng trống, người dùng thêm tầng/path/AGV qua Studio
+        const building = {
+            floors: [
+                { id: 'F1', name: 'Tầng 1', elevation: 0, width: 200, depth: 200 }
+            ]
+        };
+
+        // Thang máy: ban đầu không có, người dùng thêm qua Studio
+        const elevators = [];
+
+        // Create floor/map — render theo từng tầng (lưu ref để rebuild Studio)
+        const floorMeshes = [], gridHelpers = [], wallMeshes = [];
         const floorMaterial = new THREE.MeshStandardMaterial({
             color: 0x2a2a2a,
             roughness: 0.8,
             metalness: 0.2
         });
-        const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-        floor.rotation.x = -Math.PI / 2;
-        floor.receiveShadow = true;
-        scene.add(floor);
-
-        // Grid helper
-        const gridHelper = new THREE.GridHelper(floorSize, 20, 0x444444, 0x333333);
-        scene.add(gridHelper);
-
-        // Create walls/boundaries sử dụng helper
         const wallHeight = 5;
         const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x555555, roughness: 0.7 });
-        [
-            [floorSize, wallHeight, 2, [0, wallHeight / 2, -floorSize / 2]],
-            [floorSize, wallHeight, 2, [0, wallHeight / 2, floorSize / 2]],
-            [2, wallHeight, floorSize, [-floorSize / 2, wallHeight / 2, 0]],
-            [2, wallHeight, floorSize, [floorSize / 2, wallHeight / 2, 0]]
-        ].forEach(([w, h, d, pos]) => {
-            scene.add(Helpers.createBox([w, h, d], wallMaterial, pos));
-        });
+        function createFloorsAndWalls() {
+            building.floors.forEach((floorDef) => {
+                const floorGeometry = new THREE.PlaneGeometry(floorDef.width, floorDef.depth);
+                const floorMesh = new THREE.Mesh(floorGeometry, floorMaterial.clone());
+                floorMesh.rotation.x = -Math.PI / 2;
+                floorMesh.position.y = floorDef.elevation;
+                floorMesh.receiveShadow = true;
+                scene.add(floorMesh);
+                floorMeshes.push(floorMesh);
+                const gridHelper = new THREE.GridHelper(floorDef.width, 20, 0x444444, 0x333333);
+                gridHelper.position.y = floorDef.elevation;
+                scene.add(gridHelper);
+                gridHelpers.push(gridHelper);
+                const hw = floorDef.width / 2, hd = floorDef.depth / 2;
+                const yWall = floorDef.elevation + wallHeight / 2;
+                [
+                    [floorDef.width, wallHeight, 2, [0, yWall, -hd]],
+                    [floorDef.width, wallHeight, 2, [0, yWall, hd]],
+                    [2, wallHeight, floorDef.depth, [-hw, yWall, 0]],
+                    [2, wallHeight, floorDef.depth, [hw, yWall, 0]]
+                ].forEach(([w, h, d, pos]) => {
+                    const wall = Helpers.createBox([w, h, d], wallMaterial, pos);
+                    scene.add(wall);
+                    wallMeshes.push(wall);
+                });
+            });
+        }
+        createFloorsAndWalls();
 
-        // Add obstacles sử dụng helper
-        const obstacleMaterial = new THREE.MeshStandardMaterial({ color: 0x666666, roughness: 0.6 });
-        [
-            [[10, 8, 10], [-30, 4, -30]],
-            [[8, 6, 8], [30, 3, 30]],
-            [[12, 7, 12], [-40, 3.5, 40]],
-            [[6, 5, 6], [40, 2.5, -40]]
-        ].forEach(([size, pos]) => {
-            scene.add(Helpers.createBox(size, obstacleMaterial, pos));
-        });
+        // Render thang máy (mesh tại mỗi cửa thang trên từng tầng)
+        const elevatorMaterial = new THREE.MeshStandardMaterial({ color: 0x37474f, roughness: 0.6, metalness: 0.3 });
+        const elevatorMeshes = [];
+        function createElevatorMeshes() {
+            elevatorMeshes.forEach(m => { scene.remove(m); if (m.geometry) m.geometry.dispose(); if (m.material) m.material.dispose(); });
+            elevatorMeshes.length = 0;
+            elevators.forEach((elevator) => {
+                elevator.floorIds.forEach((floorId) => {
+                    const pos = elevator.positions[floorId];
+                    if (!pos) return;
+                    const floorDef = building.floors.find(f => f.id === floorId);
+                    if (!floorDef) return;
+                    const box = Helpers.createBox([4, 3, 4], elevatorMaterial, [pos.x, floorDef.elevation + 1.5, pos.z]);
+                    box.userData = { elevatorId: elevator.id, floorId };
+                    scene.add(box);
+                    elevatorMeshes.push(box);
+                });
+            });
+        }
+        createElevatorMeshes();
+        function rebuildFloorsAndElevators() {
+            floorMeshes.forEach(m => { scene.remove(m); if (m.geometry) m.geometry.dispose(); if (m.material) m.material.dispose(); });
+            floorMeshes.length = 0;
+            gridHelpers.forEach(m => { scene.remove(m); });
+            gridHelpers.length = 0;
+            wallMeshes.forEach(m => { scene.remove(m); if (m.geometry) m.geometry.dispose(); if (m.material) m.material.dispose(); });
+            wallMeshes.length = 0;
+            createFloorsAndWalls();
+            createElevatorMeshes();
+        }
 
-        // Path definitions - các đường dẫn cho AGV
-        const pathDefinitions = [
-            // Path 1: Hình chữ nhật
-            [
-                { x: -60, z: -60 },
-                { x: 60, z: -60 },
-                { x: 60, z: 60 },
-                { x: -60, z: 60 }
-            ],
-            // Path 2: Hình tam giác
-            [
-                { x: 0, z: -70 },
-                { x: 60, z: 40 },
-                { x: -60, z: 40 }
-            ],
-            // Path 3: Hình zigzag
-            [
-                { x: -70, z: -50 },
-                { x: -30, z: -50 },
-                { x: -30, z: 0 },
-                { x: 30, z: 0 },
-                { x: 30, z: 50 },
-                { x: 70, z: 50 }
-            ],
-            // Path 4: Hình tròn (xấp xỉ)
-            [
-                { x: 0, z: -50 },
-                { x: 35, z: -35 },
-                { x: 50, z: 0 },
-                { x: 35, z: 35 },
-                { x: 0, z: 50 },
-                { x: -35, z: 35 },
-                { x: -50, z: 0 },
-                { x: -35, z: -35 }
-            ],
-            // Path 5: Đường thẳng với nhiều điểm
-            [
-                { x: -70, z: 0 },
-                { x: -40, z: 0 },
-                { x: -10, z: 0 },
-                { x: 20, z: 0 },
-                { x: 50, z: 0 },
-                { x: 70, z: 0 },
-                { x: 50, z: 0 },
-                { x: 20, z: 0 },
-                { x: -10, z: 0 },
-                { x: -40, z: 0 }
-            ]
-        ];
+        // Không thêm obstacle mặc định — người dùng thêm khối/đối tượng qua UI nếu cần
+
+        // Helper: elevation theo tầng (path/AGV dùng độ cao sàn + 0.1 cho đường path)
+        function getFloorElevation(floorId) {
+            const f = building.floors.find(f => f.id === (floorId || 'F1'));
+            return f ? f.elevation : 0;
+        }
+        function getPathElevation(pathObj) {
+            return getFloorElevation(pathObj && pathObj.floorId) + 0.1;
+        }
+
+        // Path definitions — ban đầu trống, người dùng tạo path qua "Tạo Path Mới"
+        const pathDefinitions = [];
         
         // Tên các path để hiển thị trong dropdown
-        let pathNames = [
-            'Hình chữ nhật',
-            'Hình tam giác',
-            'Hình zigzag',
-            'Hình tròn',
-            'Đường thẳng'
-        ];
+        let pathNames = [];
+        
+        // Endpoints: điểm trên map/path mà AGV đi qua thì gửi event
+        const endpoints = []; // { id, name, type: 'standalone', x, z, floorId }
+        const endpointMeshes = [];
+        function getEndpointPosition(ep) {
+            if (ep.type === 'path' && ep.pathIndex != null && pathDefinitions[ep.pathIndex]) {
+                const path = pathDefinitions[ep.pathIndex];
+                const pts = path.points;
+                const idx = Math.min(ep.pointIndex != null ? ep.pointIndex : 0, pts.length - 1);
+                const p = pts[idx];
+                return { x: p.x, z: p.z, y: getFloorElevation(path.floorId) + 0.1 };
+            }
+            return { x: ep.x || 0, z: ep.z || 0, y: getFloorElevation(ep.floorId) + 0.1 };
+        }
+        function onEndpointReached(agvId, endpointId) {
+            console.log('Endpoint reached:', agvId, endpointId);
+        }
+        function addEndpoint(ep) {
+            if (!ep.id) ep.id = 'EP-' + (endpoints.length + 1);
+            endpoints.push(ep);
+            const pos = getEndpointPosition(ep);
+            const geom = new THREE.SphereGeometry(1.5, 16, 16);
+            const mat = new THREE.MeshStandardMaterial({ color: 0xff9800, emissive: 0xff9800, emissiveIntensity: 0.3 });
+            const mesh = new THREE.Mesh(geom, mat);
+            mesh.position.set(pos.x, pos.y, pos.z);
+            mesh.userData = { endpointId: ep.id };
+            scene.add(mesh);
+            endpointMeshes.push({ id: ep.id, mesh });
+        }
+        function getStudioConfig() {
+            return { building, elevators, pathDefinitions, pathNames, endpoints };
+        }
+        function saveStudioConfig() {
+            const json = JSON.stringify(getStudioConfig(), null, 2);
+            const blob = new Blob([json], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'studio-config.json';
+            a.click();
+            URL.revokeObjectURL(a.href);
+        }
+        function loadStudioConfig(jsonStr) {
+            try {
+                const data = JSON.parse(jsonStr);
+                if (data.building && data.building.floors) building.floors = data.building.floors;
+                if (Array.isArray(data.elevators)) { elevators.length = 0; elevators.push(...data.elevators); }
+                if (Array.isArray(data.pathDefinitions)) { pathDefinitions.length = 0; pathDefinitions.push(...data.pathDefinitions); }
+                if (Array.isArray(data.pathNames)) { pathNames.length = 0; pathNames.push(...data.pathNames); }
+                if (Array.isArray(data.endpoints)) {
+                    endpointMeshes.forEach(o => { scene.remove(o.mesh); o.mesh.geometry.dispose(); o.mesh.material.dispose(); });
+                    endpointMeshes.length = 0;
+                    endpoints.length = 0;
+                    data.endpoints.forEach(ep => addEndpoint(ep));
+                }
+                rebuildFloorsAndElevators();
+                if (typeof config !== 'undefined') {
+                    config.selectedPathIndex = 0;
+                    config.selectedPathName = pathNames[0] || '';
+                    config.currentFloorId = building.floors[0] ? building.floors[0].id : 'F1';
+                }
+                if (typeof refreshDesktopUI === 'function') refreshDesktopUI();
+            } catch (e) { console.error('Load config failed:', e); alert('Tải cấu hình thất bại: ' + e.message); }
+        }
         
         // Hệ thống lưu và hiển thị paths độc lập (không gắn với AGV)
         const standalonePaths = []; // Mảng lưu các path visualization độc lập
@@ -1031,8 +1259,13 @@
         // Hệ thống tạo path mới
         let isCreatingPath = false; // Mode tạo path
         let newPathWaypoints = []; // Các waypoint đang được tạo
+        let newPathSegmentTypes = []; // Type của từng segment (từ waypoint i đến i+1)
+        let newPathControlPoints = []; // Control points cho các segment bezier (mỗi phần tử là {cp1: {x, z}, cp2: {x, z}} hoặc null nếu linear)
         let newPathPreview = null; // Preview line của path đang tạo
         let newPathMarkers = null; // Markers của các waypoint đang tạo
+        let newPathControlPointMarkers = null; // Markers của các control points
+        let selectedControlPoint = null; // Control point đang được chọn để di chuyển
+        let newPathType = 'bezier'; // Loại path hiện tại (áp dụng cho segment mới)
         
         // Bắt đầu tạo path mới
         function startCreatingPath() {
@@ -1044,6 +1277,15 @@
             
             isCreatingPath = true;
             newPathWaypoints = [];
+            newPathSegmentTypes = [];
+            newPathControlPoints = [];
+            selectedControlPoint = null;
+            isDraggingControlPoint = false;
+            justReleasedFromControlPointDrag = false;
+            // Đồng bộ newPathType với config
+            if (typeof config !== 'undefined' && config.newPathType) {
+                newPathType = config.newPathType;
+            }
             
             // Xóa preview cũ nếu có
             if (newPathPreview) {
@@ -1055,15 +1297,24 @@
                 scene.remove(newPathMarkers);
                 newPathMarkers = null;
             }
+            if (newPathControlPointMarkers) {
+                newPathControlPointMarkers.children.forEach(child => scene.remove(child));
+                scene.remove(newPathControlPointMarkers);
+                newPathControlPointMarkers = null;
+            }
             
             // Tạo group cho markers
             newPathMarkers = new THREE.Group();
             scene.add(newPathMarkers);
             
-            // Thay đổi cursor
-            renderer.domElement.style.cursor = 'crosshair';
+            // Tạo group cho control point markers
+            newPathControlPointMarkers = new THREE.Group();
+            scene.add(newPathControlPointMarkers);
             
-            // Cập nhật config
+            renderer.domElement.style.cursor = 'crosshair';
+            // Tắt OrbitControls khi đang tạo path → click vào control point không xoay camera
+            if (controls) controls.enabled = false;
+            
             if (typeof config !== 'undefined') {
                 config.isCreatingPath = true;
             }
@@ -1073,6 +1324,11 @@
         function cancelCreatingPath() {
             isCreatingPath = false;
             newPathWaypoints = [];
+            newPathSegmentTypes = [];
+            newPathControlPoints = [];
+            selectedControlPoint = null;
+            isDraggingControlPoint = false;
+            justReleasedFromControlPointDrag = false;
             
             if (newPathPreview) {
                 scene.remove(newPathPreview);
@@ -1083,6 +1339,16 @@
                 scene.remove(newPathMarkers);
                 newPathMarkers = null;
             }
+            if (newPathControlPointMarkers) {
+                newPathControlPointMarkers.children.forEach(child => scene.remove(child));
+                scene.remove(newPathControlPointMarkers);
+                newPathControlPointMarkers = null;
+            }
+            
+            if (transformControls && transformControls.object) {
+                transformControls.detach();
+            }
+            if (controls) controls.enabled = true;
             
             renderer.domElement.style.cursor = 'default';
             
@@ -1098,24 +1364,39 @@
                 return;
             }
             
-            // Lưu path mới
-            const newPath = newPathWaypoints.map(wp => ({ x: wp.x, z: wp.z }));
+            // Lưu path mới với segmentTypes và control points đã thu thập
+            const newPathPoints = newPathWaypoints.map(wp => ({ x: wp.x, z: wp.z }));
+            // Sử dụng segmentTypes đã thu thập khi thêm waypoint
+            // Nếu chưa đủ (có thể xảy ra nếu chỉ có 1 waypoint), bổ sung bằng type hiện tại
+            const segmentTypes = [...newPathSegmentTypes];
+            while (segmentTypes.length < newPathPoints.length) {
+                segmentTypes.push(newPathType);
+            }
+            // Lưu control points (chỉ cho bezier segments)
+            const controlPoints = newPathControlPoints.map(cp => {
+                if (cp && cp.cp1 && cp.cp2) {
+                    return { cp1: { x: cp.cp1.x, z: cp.cp1.z }, cp2: { x: cp.cp2.x, z: cp.cp2.z } };
+                }
+                return null;
+            });
+            const newPath = {
+                floorId: (typeof config !== 'undefined' && config.currentFloorId) ? config.currentFloorId : building.floors[0].id,
+                points: newPathPoints,
+                segmentTypes: segmentTypes,
+                controlPoints: controlPoints
+            };
             pathDefinitions.push(newPath);
             
-            // Thêm tên path mới
             const newPathName = `Path ${pathDefinitions.length}`;
             pathNames.push(newPathName);
             
-            // Cập nhật selectedPathIndex để chọn path mới
             if (typeof config !== 'undefined') {
                 config.selectedPathIndex = pathDefinitions.length - 1;
                 config.selectedPathName = newPathName;
             }
             
-            // Xóa preview
             cancelCreatingPath();
             
-            // Vẽ path mới trên scene
             const pathIndex = pathDefinitions.length - 1;
             const pathVisual = createPathLine(newPath, defaultPathColor);
             // Đảm bảo visibility theo pathsVisible hiện tại
@@ -1150,6 +1431,7 @@
                 });
             }
             
+            if (typeof refreshDesktopUI === 'function') refreshDesktopUI();
             alert(`Đã tạo path mới: ${newPathName} với ${newPathWaypoints.length} waypoint!`);
         }
         
@@ -1157,7 +1439,57 @@
         function addWaypointToNewPath(position) {
             if (!isCreatingPath) return;
             
+            // Nếu đã có ít nhất 1 waypoint, lưu type và control points cho segment từ waypoint trước đến waypoint này
+            if (newPathWaypoints.length > 0) {
+                // Lưu type hiện tại cho segment mới
+                newPathSegmentTypes.push(newPathType);
+                
+                // Nếu là bezier, tạo 2 control points mặc định
+                if (newPathType === 'bezier') {
+                    const prevWaypoint = newPathWaypoints[newPathWaypoints.length - 1];
+                    const currentWaypoint = position;
+                    
+                    // Tính vector từ prevWaypoint đến currentWaypoint
+                    const dx = currentWaypoint.x - prevWaypoint.x;
+                    const dz = currentWaypoint.z - prevWaypoint.z;
+                    
+                    // Control point 1: ở 1/3 quãng đường từ prevWaypoint
+                    const cp1 = {
+                        x: prevWaypoint.x + dx * 0.33,
+                        z: prevWaypoint.z + dz * 0.33
+                    };
+                    
+                    // Control point 2: ở 2/3 quãng đường từ prevWaypoint
+                    const cp2 = {
+                        x: prevWaypoint.x + dx * 0.67,
+                        z: prevWaypoint.z + dz * 0.67
+                    };
+                    
+                    // Thêm một chút độ cong bằng cách dịch chuyển vuông góc với đường thẳng
+                    const perpX = -dz;
+                    const perpZ = dx;
+                    const curveAmount = Math.sqrt(dx * dx + dz * dz) * 0.2; // 20% độ dài
+                    const normalize = Math.sqrt(perpX * perpX + perpZ * perpZ);
+                    if (normalize > 0) {
+                        cp1.x += (perpX / normalize) * curveAmount;
+                        cp1.z += (perpZ / normalize) * curveAmount;
+                        cp2.x += (perpX / normalize) * curveAmount;
+                        cp2.z += (perpZ / normalize) * curveAmount;
+                    }
+                    
+                    newPathControlPoints.push({ cp1: cp1, cp2: cp2 });
+                } else {
+                    // Linear: không có control points
+                    newPathControlPoints.push(null);
+                }
+            }
+            
+            // Push waypoint trước khi tạo control point markers để createControlPointMarkers có endpoint (4 điểm: start, cp1, cp2, end)
             newPathWaypoints.push(position);
+            
+            if (newPathWaypoints.length > 1 && newPathType === 'bezier' && newPathControlPoints[newPathControlPoints.length - 1]) {
+                createControlPointMarkers(newPathControlPoints.length - 1, newPathControlPoints[newPathControlPoints.length - 1].cp1, newPathControlPoints[newPathControlPoints.length - 1].cp2);
+            }
             
             // Tạo marker cho waypoint
             const markerGeometry = new THREE.SphereGeometry(0.5, 16, 16);
@@ -1174,7 +1506,156 @@
             updateNewPathPreview();
         }
         
-        // Cập nhật preview line của path đang tạo
+        // Tạo markers cho control points
+        function createControlPointMarkers(segmentIndex, cp1, cp2) {
+            if (!newPathControlPointMarkers) return;
+            
+            // Xóa markers cũ của segment này nếu có
+            const oldMarkers = newPathControlPointMarkers.children.filter(child => 
+                child.userData.segmentIndex === segmentIndex
+            );
+            oldMarkers.forEach(marker => {
+                newPathControlPointMarkers.remove(marker);
+                scene.remove(marker);
+            });
+            
+            // Sphere radius 1.0 để dễ click (raycast)
+            const cp1Geometry = new THREE.SphereGeometry(1.0, 16, 16);
+            const cp1Material = new THREE.MeshStandardMaterial({ 
+                color: 0xff8800,
+                emissive: 0x442200,
+                transparent: false
+            });
+            const cp1Marker = new THREE.Mesh(cp1Geometry, cp1Material);
+            cp1Marker.position.set(cp1.x, 0.6, cp1.z);
+            cp1Marker.userData = { 
+                segmentIndex: segmentIndex, 
+                controlPoint: 'cp1',
+                isHovered: false
+            };
+            cp1Marker.castShadow = true;
+            newPathControlPointMarkers.add(cp1Marker);
+            
+            const cp2Geometry = new THREE.SphereGeometry(1.0, 16, 16);
+            const cp2Material = new THREE.MeshStandardMaterial({ 
+                color: 0xff8800,
+                emissive: 0x442200,
+                transparent: false
+            });
+            const cp2Marker = new THREE.Mesh(cp2Geometry, cp2Material);
+            cp2Marker.position.set(cp2.x, 0.6, cp2.z);
+            cp2Marker.userData = { 
+                segmentIndex: segmentIndex, 
+                controlPoint: 'cp2',
+                isHovered: false
+            };
+            cp2Marker.castShadow = true;
+            newPathControlPointMarkers.add(cp2Marker);
+            
+            // Vẽ đường nối từ waypoint đến control points (để dễ nhìn)
+            const lineMaterial = new THREE.LineBasicMaterial({ 
+                color: 0xff8800, 
+                opacity: 0.3, 
+                transparent: true,
+                linewidth: 1
+            });
+            
+            // Đường từ waypoint đầu đến cp1
+            const startWaypoint = newPathWaypoints[segmentIndex];
+            const line1Points = [
+                new THREE.Vector3(startWaypoint.x, 0.2, startWaypoint.z),
+                new THREE.Vector3(cp1.x, 0.2, cp1.z)
+            ];
+            const line1Geometry = new THREE.BufferGeometry().setFromPoints(line1Points);
+            const line1 = new THREE.Line(line1Geometry, lineMaterial);
+            line1.userData = { segmentIndex: segmentIndex, type: 'controlLine' };
+            newPathControlPointMarkers.add(line1);
+            
+            // Đường từ cp1 đến cp2
+            const line2Points = [
+                new THREE.Vector3(cp1.x, 0.2, cp1.z),
+                new THREE.Vector3(cp2.x, 0.2, cp2.z)
+            ];
+            const line2Geometry = new THREE.BufferGeometry().setFromPoints(line2Points);
+            const line2 = new THREE.Line(line2Geometry, lineMaterial);
+            line2.userData = { segmentIndex: segmentIndex, type: 'controlLine' };
+            newPathControlPointMarkers.add(line2);
+            
+            // Đường từ cp2 đến waypoint cuối
+            const endWaypoint = newPathWaypoints[segmentIndex + 1];
+            const line3Points = [
+                new THREE.Vector3(cp2.x, 0.2, cp2.z),
+                new THREE.Vector3(endWaypoint.x, 0.2, endWaypoint.z)
+            ];
+            const line3Geometry = new THREE.BufferGeometry().setFromPoints(line3Points);
+            const line3 = new THREE.Line(line3Geometry, lineMaterial);
+            line3.userData = { segmentIndex: segmentIndex, type: 'controlLine' };
+            newPathControlPointMarkers.add(line3);
+        }
+        
+        // Cập nhật đường nối control points khi di chuyển
+        function updateControlPointLines(segmentIndex) {
+            if (!newPathControlPointMarkers || !newPathControlPoints[segmentIndex]) return;
+            
+            const controlPoints = newPathControlPoints[segmentIndex];
+            if (!controlPoints || !controlPoints.cp1 || !controlPoints.cp2) return;
+            
+            // Tìm các đường nối của segment này
+            const lines = newPathControlPointMarkers.children.filter(child => 
+                child.userData && child.userData.segmentIndex === segmentIndex && child.userData.type === 'controlLine'
+            );
+            
+            // Xóa các đường cũ
+            lines.forEach(line => {
+                newPathControlPointMarkers.remove(line);
+                scene.remove(line);
+                if (line.geometry) line.geometry.dispose();
+                if (line.material) line.material.dispose();
+            });
+            
+            // Tạo lại các đường nối
+            const lineMaterial = new THREE.LineBasicMaterial({ 
+                color: 0xff8800, 
+                opacity: 0.3, 
+                transparent: true,
+                linewidth: 1
+            });
+            
+            const startWaypoint = newPathWaypoints[segmentIndex];
+            const endWaypoint = newPathWaypoints[segmentIndex + 1];
+            
+            // Đường từ waypoint đầu đến cp1
+            const line1Points = [
+                new THREE.Vector3(startWaypoint.x, 0.2, startWaypoint.z),
+                new THREE.Vector3(controlPoints.cp1.x, 0.2, controlPoints.cp1.z)
+            ];
+            const line1Geometry = new THREE.BufferGeometry().setFromPoints(line1Points);
+            const line1 = new THREE.Line(line1Geometry, lineMaterial);
+            line1.userData = { segmentIndex: segmentIndex, type: 'controlLine' };
+            newPathControlPointMarkers.add(line1);
+            
+            // Đường từ cp1 đến cp2
+            const line2Points = [
+                new THREE.Vector3(controlPoints.cp1.x, 0.2, controlPoints.cp1.z),
+                new THREE.Vector3(controlPoints.cp2.x, 0.2, controlPoints.cp2.z)
+            ];
+            const line2Geometry = new THREE.BufferGeometry().setFromPoints(line2Points);
+            const line2 = new THREE.Line(line2Geometry, lineMaterial);
+            line2.userData = { segmentIndex: segmentIndex, type: 'controlLine' };
+            newPathControlPointMarkers.add(line2);
+            
+            // Đường từ cp2 đến waypoint cuối
+            const line3Points = [
+                new THREE.Vector3(controlPoints.cp2.x, 0.2, controlPoints.cp2.z),
+                new THREE.Vector3(endWaypoint.x, 0.2, endWaypoint.z)
+            ];
+            const line3Geometry = new THREE.BufferGeometry().setFromPoints(line3Points);
+            const line3 = new THREE.Line(line3Geometry, lineMaterial);
+            line3.userData = { segmentIndex: segmentIndex, type: 'controlLine' };
+            newPathControlPointMarkers.add(line3);
+        }
+        
+        // Cập nhật preview line của path đang tạo (elevation theo tầng đang chọn)
         function updateNewPathPreview() {
             if (newPathWaypoints.length < 2) {
                 if (newPathPreview) {
@@ -1184,23 +1665,73 @@
                 return;
             }
             
-            // Xóa preview cũ
             if (newPathPreview) {
                 scene.remove(newPathPreview);
             }
             
-            // Tạo path từ waypoints
-            const path = newPathWaypoints.map(wp => ({ x: wp.x, z: wp.z }));
-            const curve = createSplineCurve(path, false); // Không đóng path khi đang tạo
-            const divisions = newPathWaypoints.length * 20;
-            const splinePoints = curve.getPoints(divisions);
+            const floorId = (typeof config !== 'undefined' && config.currentFloorId) ? config.currentFloorId : building.floors[0].id;
+            const y = getFloorElevation(floorId) + 0.1;
             
-            const geometry = new THREE.BufferGeometry().setFromPoints(splinePoints);
+            const pathPoints = newPathWaypoints.map(wp => ({ x: wp.x, z: wp.z }));
+            let linePoints = [];
+            
+            for (let i = 0; i < newPathWaypoints.length - 1; i++) {
+                const startPoint = new THREE.Vector3(newPathWaypoints[i].x, y, newPathWaypoints[i].z);
+                const endPoint = new THREE.Vector3(newPathWaypoints[i + 1].x, y, newPathWaypoints[i + 1].z);
+                const segmentType = newPathSegmentTypes[i] || newPathType;
+                
+                if (segmentType === 'linear') {
+                    if (i === 0 || linePoints.length === 0) {
+                        linePoints.push(startPoint);
+                    }
+                    linePoints.push(endPoint);
+                } else {
+                    const controlPoints = newPathControlPoints[i];
+                    if (controlPoints && controlPoints.cp1 && controlPoints.cp2) {
+                        const cp1 = new THREE.Vector3(controlPoints.cp1.x, y, controlPoints.cp1.z);
+                        const cp2 = new THREE.Vector3(controlPoints.cp2.x, y, controlPoints.cp2.z);
+                        
+                        // Tạo Cubic Bezier Curve
+                        const bezierCurve = new THREE.CubicBezierCurve3(startPoint, cp1, cp2, endPoint);
+                        const divisions = 30; // Số điểm cho mỗi segment bezier
+                        const segmentPoints = bezierCurve.getPoints(divisions);
+                        
+                        if (i === 0 || linePoints.length === 0) {
+                            linePoints.push(segmentPoints[0]);
+                        }
+                        // Bỏ điểm đầu để tránh trùng lặp
+                        for (let j = 1; j < segmentPoints.length; j++) {
+                            linePoints.push(segmentPoints[j]);
+                        }
+                    } else {
+                        // Fallback: nếu không có control points, dùng cách cũ
+                        const midPoint = new THREE.Vector3().lerpVectors(startPoint, endPoint, 0.5);
+                        const dir = new THREE.Vector3().subVectors(endPoint, startPoint);
+                        const perp = new THREE.Vector3(-dir.z, 0, dir.x).normalize();
+                        const curveAmount = dir.length() * 0.3;
+                        midPoint.add(perp.multiplyScalar(curveAmount));
+                        
+                        const bezierCurve = new THREE.CatmullRomCurve3([startPoint, midPoint, endPoint], false);
+                        const divisions = 20;
+                        const segmentPoints = bezierCurve.getPoints(divisions);
+                        
+                        if (i === 0 || linePoints.length === 0) {
+                            linePoints.push(segmentPoints[0]);
+                        }
+                        for (let j = 1; j < segmentPoints.length; j++) {
+                            linePoints.push(segmentPoints[j]);
+                        }
+                    }
+                }
+            }
+            
+            const geometry = new THREE.BufferGeometry().setFromPoints(linePoints);
             const material = new THREE.LineBasicMaterial({ 
                 color: 0x00ff00,
                 linewidth: 3,
                 opacity: 0.8,
-                transparent: true
+                transparent: true,
+                linecap: 'round'
             });
             newPathPreview = new THREE.Line(geometry, material);
             scene.add(newPathPreview);
@@ -1215,14 +1746,31 @@
             addWaypointToNewPath(waypoint);
         }
 
-        // Function to create spline curve from path points
-        function createSplineCurve(path, closed = true) {
-            const points = path.map(p => new THREE.Vector3(p.x, 0.1, p.z));
+        // Function to create linear curve (đường thẳng nối các điểm)
+        function createLinearCurve(path, closed = true, elevation = 0.1) {
+            const points = path.map(p => new THREE.Vector3(p.x, elevation, p.z));
+            
+            if (points.length < 2) {
+                points.push(new THREE.Vector3(points[0].x + 1, elevation, points[0].z + 1));
+            }
+            
+            // Tạo curve từ các điểm, nối thẳng
+            if (closed && points.length > 2) {
+                // Thêm điểm đầu vào cuối để đóng vòng
+                points.push(points[0].clone());
+            }
+            
+            return new THREE.CatmullRomCurve3(points, false); // false vì đã tự đóng bằng cách thêm điểm
+        }
+        
+        // Function to create bezier/spline curve from path points
+        function createSplineCurve(path, closed = true, elevation = 0.1) {
+            const points = path.map(p => new THREE.Vector3(p.x, elevation, p.z));
             
             // Nếu path có ít hơn 2 điểm, không thể tạo curve
             if (points.length < 2) {
                 // Tạo một điểm giả để tránh lỗi
-                points.push(new THREE.Vector3(points[0].x + 1, 0.1, points[0].z + 1));
+                points.push(new THREE.Vector3(points[0].x + 1, elevation, points[0].z + 1));
             }
             
             // Nếu path có ít hơn 4 điểm và closed, cần thêm điểm để spline hoạt động tốt
@@ -1243,34 +1791,201 @@
             
             // Nếu không đóng và có ít hơn 2 điểm, không thể tạo spline
             if (!closed && points.length < 2) {
-                points.push(new THREE.Vector3(points[0].x + 1, 0.1, points[0].z + 1));
+                points.push(new THREE.Vector3(points[0].x + 1, elevation, points[0].z + 1));
             }
             
             return new THREE.CatmullRomCurve3(points, closed);
         }
+        
+        // Function to create curve from path object với segmentTypes
+        function createCurveFromPath(pathObj, closed = true, elevation = 0.1) {
+            if (typeof pathObj === 'object' && pathObj.points) {
+                const points = pathObj.points;
+                const segmentTypes = pathObj.segmentTypes;
+                const y = (elevation !== undefined) ? elevation : getPathElevation(pathObj);
+                
+                // Nếu có segmentTypes, tạo CurvePath với nhiều segment
+                if (segmentTypes && segmentTypes.length > 0) {
+                    const curvePath = new THREE.CurvePath();
+                    
+                    for (let i = 0; i < points.length - 1; i++) {
+                        const startPoint = new THREE.Vector3(points[i].x, y, points[i].z);
+                        const endPoint = new THREE.Vector3(points[i + 1].x, y, points[i + 1].z);
+                        const segmentType = segmentTypes[i] || 'linear';
+                        
+                        if (segmentType === 'linear') {
+                            // Tạo đường thẳng bằng QuadraticBezierCurve3 với control point ở giữa
+                            const midPoint = new THREE.Vector3().lerpVectors(startPoint, endPoint, 0.5);
+                            const lineCurve = new THREE.QuadraticBezierCurve3(startPoint, midPoint, endPoint);
+                            curvePath.add(lineCurve);
+                        } else {
+                            // Tạo bezier curve với control points
+                            const controlPoints = pathObj.controlPoints;
+                            if (controlPoints && controlPoints[i] && controlPoints[i].cp1 && controlPoints[i].cp2) {
+                                // Sử dụng control points đã lưu
+                                const cp1 = new THREE.Vector3(controlPoints[i].cp1.x, y, controlPoints[i].cp1.z);
+                                const cp2 = new THREE.Vector3(controlPoints[i].cp2.x, y, controlPoints[i].cp2.z);
+                                const bezierCurve = new THREE.CubicBezierCurve3(startPoint, cp1, cp2, endPoint);
+                                curvePath.add(bezierCurve);
+                            } else {
+                                // Fallback: tạo control points tự động
+                                const midPoint = new THREE.Vector3().lerpVectors(startPoint, endPoint, 0.5);
+                                const dir = new THREE.Vector3().subVectors(endPoint, startPoint);
+                                const perp = new THREE.Vector3(-dir.z, 0, dir.x).normalize();
+                                const curveAmount = dir.length() * 0.3;
+                                midPoint.add(perp.multiplyScalar(curveAmount));
+                                
+                                const bezierCurve = new THREE.CatmullRomCurve3([startPoint, midPoint, endPoint], false);
+                                curvePath.add(bezierCurve);
+                            }
+                        }
+                    }
+                    
+                    // Nếu đóng, thêm segment từ điểm cuối về điểm đầu
+                    if (closed && points.length > 2) {
+                        const lastIndex = points.length - 1;
+                        const startPoint = new THREE.Vector3(points[lastIndex].x, y, points[lastIndex].z);
+                        const endPoint = new THREE.Vector3(points[0].x, y, points[0].z);
+                        const segmentType = segmentTypes[lastIndex] || segmentTypes[0] || 'linear';
+                        
+                        if (segmentType === 'linear') {
+                            const midPoint = new THREE.Vector3().lerpVectors(startPoint, endPoint, 0.5);
+                            const lineCurve = new THREE.QuadraticBezierCurve3(startPoint, midPoint, endPoint);
+                            curvePath.add(lineCurve);
+                        } else {
+                            // Bezier với control points
+                            const controlPoints = pathObj.controlPoints;
+                            if (controlPoints && controlPoints[lastIndex] && controlPoints[lastIndex].cp1 && controlPoints[lastIndex].cp2) {
+                                const cp1 = new THREE.Vector3(controlPoints[lastIndex].cp1.x, y, controlPoints[lastIndex].cp1.z);
+                                const cp2 = new THREE.Vector3(controlPoints[lastIndex].cp2.x, y, controlPoints[lastIndex].cp2.z);
+                                const bezierCurve = new THREE.CubicBezierCurve3(startPoint, cp1, cp2, endPoint);
+                                curvePath.add(bezierCurve);
+                            } else {
+                                const midPoint = new THREE.Vector3().lerpVectors(startPoint, endPoint, 0.5);
+                                const dir = new THREE.Vector3().subVectors(endPoint, startPoint);
+                                const perp = new THREE.Vector3(-dir.z, 0, dir.x).normalize();
+                                const curveAmount = dir.length() * 0.3;
+                                midPoint.add(perp.multiplyScalar(curveAmount));
+                                const bezierCurve = new THREE.CatmullRomCurve3([startPoint, midPoint, endPoint], false);
+                                curvePath.add(bezierCurve);
+                            }
+                        }
+                    }
+                    
+                    return curvePath;
+                }
+                
+                // Backward compatibility: nếu có type cũ
+                if (pathObj.type === 'linear') {
+                    return createLinearCurve(pathObj.points, closed, y);
+                } else {
+                    return createSplineCurve(pathObj.points, closed, y);
+                }
+            } else {
+                // Path là mảng points cũ (backward compatibility)
+                return createSplineCurve(pathObj, closed, elevation);
+            }
+        }
 
-        // Function to create path visualization with spline
-        function createPathLine(path, color) {
-            // Tạo spline curve
-            const curve = createSplineCurve(path, true);
+        // Function to create path visualization
+        function createPathLine(pathObj, color, elevation) {
+            // Xử lý path object hoặc mảng points cũ
+            let pathPoints, segmentTypes;
+            if (typeof pathObj === 'object' && pathObj.points) {
+                pathPoints = pathObj.points;
+                segmentTypes = pathObj.segmentTypes;
+            } else {
+                // Backward compatibility với mảng points cũ
+                pathPoints = pathObj;
+                segmentTypes = null;
+            }
+            const y = (elevation !== undefined) ? elevation : getPathElevation(pathObj);
             
-            // Tạo nhiều điểm trên spline để vẽ đường cong mượt
-            const divisions = path.length * 50; // Số điểm để vẽ đường cong
-            const splinePoints = curve.getPoints(divisions);
+            // Tạo curve dựa trên type
+            const curve = createCurveFromPath(pathObj, true, y);
             
-            const geometry = new THREE.BufferGeometry().setFromPoints(splinePoints);
+            // Tạo điểm để vẽ
+            let linePoints;
+            if (segmentTypes && segmentTypes.length > 0) {
+                // Có segmentTypes: vẽ từng segment riêng biệt
+                linePoints = [];
+                const closed = pathPoints.length > 2;
+                const segments = closed ? pathPoints.length : pathPoints.length - 1;
+                
+                for (let i = 0; i < segments; i++) {
+                    const startIdx = i;
+                    const endIdx = (i + 1) % pathPoints.length;
+                    const segmentType = segmentTypes[i] || 'linear';
+                    
+                    const startPoint = new THREE.Vector3(pathPoints[startIdx].x, y, pathPoints[startIdx].z);
+                    const endPoint = new THREE.Vector3(pathPoints[endIdx].x, y, pathPoints[endIdx].z);
+                    
+                    if (segmentType === 'linear') {
+                        // Đường thẳng: chỉ cần 2 điểm
+                        if (i === 0 || linePoints.length === 0) {
+                            linePoints.push(startPoint);
+                        }
+                        linePoints.push(endPoint);
+                    } else {
+                        // Bezier: sử dụng control points nếu có
+                        const controlPoints = pathObj.controlPoints;
+                        let bezierCurve;
+                        
+                        if (controlPoints && controlPoints[i] && controlPoints[i].cp1 && controlPoints[i].cp2) {
+                            // Sử dụng control points đã lưu
+                            const cp1 = new THREE.Vector3(controlPoints[i].cp1.x, y, controlPoints[i].cp1.z);
+                            const cp2 = new THREE.Vector3(controlPoints[i].cp2.x, y, controlPoints[i].cp2.z);
+                            bezierCurve = new THREE.CubicBezierCurve3(startPoint, cp1, cp2, endPoint);
+                        } else {
+                            // Fallback: tạo control points tự động
+                            const midPoint = new THREE.Vector3().lerpVectors(startPoint, endPoint, 0.5);
+                            const dir = new THREE.Vector3().subVectors(endPoint, startPoint);
+                            const perp = new THREE.Vector3(-dir.z, 0, dir.x).normalize();
+                            const curveAmount = dir.length() * 0.3;
+                            midPoint.add(perp.multiplyScalar(curveAmount));
+                            bezierCurve = new THREE.CatmullRomCurve3([startPoint, midPoint, endPoint], false);
+                        }
+                        
+                        const divisions = 30; // Số điểm cho mỗi segment bezier
+                        const segmentPoints = bezierCurve.getPoints(divisions);
+                        
+                        if (i === 0 || linePoints.length === 0) {
+                            linePoints.push(segmentPoints[0]);
+                        }
+                        // Bỏ điểm đầu để tránh trùng lặp
+                        for (let j = 1; j < segmentPoints.length; j++) {
+                            linePoints.push(segmentPoints[j]);
+                        }
+                    }
+                }
+            } else {
+                // Không có segmentTypes: xử lý như cũ
+                const pathType = (typeof pathObj === 'object' && pathObj.type) ? pathObj.type : 'bezier';
+                if (pathType === 'linear') {
+                    linePoints = pathPoints.map(p => new THREE.Vector3(p.x, y, p.z));
+                    if (pathPoints.length > 2) {
+                        linePoints.push(linePoints[0].clone());
+                    }
+                } else {
+                    const divisions = pathPoints.length * 50;
+                    linePoints = curve.getPoints(divisions);
+                }
+            }
+            
+            const geometry = new THREE.BufferGeometry().setFromPoints(linePoints);
             const material = new THREE.LineBasicMaterial({ 
                 color: color,
                 linewidth: 2,
                 opacity: 0.5,
-                transparent: true
+                transparent: true,
+                linecap: 'round'
             });
             const line = new THREE.Line(geometry, material);
             scene.add(line);
             
             // Create waypoint markers
             const markers = new THREE.Group();
-            path.forEach((point, index) => {
+            pathPoints.forEach((point, index) => {
                 const markerGeometry = new THREE.CylinderGeometry(0.5, 0.5, 0.2, 16);
                 const markerMaterial = new THREE.MeshStandardMaterial({
                     color: color,
@@ -1278,7 +1993,7 @@
                     emissiveIntensity: 0.3
                 });
                 const marker = new THREE.Mesh(markerGeometry, markerMaterial);
-                marker.position.set(point.x, 0.1, point.z);
+                marker.position.set(point.x, y, point.z);
                 marker.rotation.x = -Math.PI / 2;
                 markers.add(marker);
                 
@@ -1299,40 +2014,56 @@
             constructor(id, path, color = 0x4CAF50) {
                 this.id = id;
                 this.color = color;
-                this.path = path; // Array of {x, z} points
+                
+                // Path object (để lấy floorId, elevation)
+                const pathObj = typeof path === 'object' && path.points ? path : { points: path, type: 'bezier' };
+                this.pathObj = pathObj;
+                if (typeof path === 'object' && path.points) {
+                    this.path = path.points;
+                    this.pathType = path.type || 'bezier';
+                } else {
+                    this.path = path;
+                    this.pathType = 'bezier';
+                }
+                
+                this.currentFloorId = pathObj.floorId || 'F1';
+                const pathElevation = getPathElevation(pathObj);
+                const floorElevation = getFloorElevation(this.currentFloorId);
+                
                 this.loopPath = true; // Lặp lại path khi đến cuối
                 
-                // Tạo spline curve từ path
-                this.curve = createSplineCurve(path, true);
+                // Tạo curve từ path với elevation đúng tầng
+                this.curve = createCurveFromPath(pathObj, true, pathElevation);
                 
                 // Vị trí trên curve (0.0 đến 1.0)
-                this.curvePosition = Math.random(); // Bắt đầu từ vị trí ngẫu nhiên trên path
+                this.curvePosition = Math.random();
                 
-                // Tốc độ di chuyển trên curve (0-1 per frame)
-                // Tốc độ khác nhau cho mỗi AGV để tạo sự đa dạng
-                this.speed = 0.0005 + Math.random() * 0.001; // Tốc độ từ 0.0005 đến 0.0015
+                this.speed = 0.0005 + Math.random() * 0.001;
                 
-                // Lấy vị trí ban đầu từ curve
                 const startPos = this.curve.getPointAt(0);
                 this.currentX = startPos.x;
                 this.currentZ = startPos.z;
                 
                 this.rotationY = 0;
-                this.state = 'MOVING'; // MOVING, IDLE, LOADING, CHARGING
-                this.battery = Math.random() * 30 + 70; // 70-100%
+                this.state = 'MOVING'; // MOVING | ENTERING_ELEVATOR | IN_ELEVATOR | EXITING_ELEVATOR | IDLE
+                this.battery = Math.random() * 30 + 70;
                 this.loaded = Math.random() > 0.5;
+                // Elevator state
+                this.elevatorTargetX = 0;
+                this.elevatorTargetZ = 0;
+                this.nextFloorPathIndex = null;
+                this.nextFloorId = null;
+                this.elevatorTweenProgress = 0;
+                this.elevatorFromY = 0;
+                this.elevatorToY = 0;
+                this.visitedEndpointIds = new Set();
 
-                // Create AGV mesh
                 this.group = new THREE.Group();
-                
-                // Model management
-                this.importedModel = null; // Model được import từ file
-                this.defaultModelGroup = new THREE.Group(); // Group chứa mô hình mặc định
-                this.isUsingDefaultModel = true; // Ban đầu dùng default model
-                
-                // TransformControls flag
-                this.isBeingDragged = false; // Đang được kéo bằng TransformControls
-                this.hasCustomRotation = false; // Có góc xoay tùy chỉnh (không tính từ path)
+                this.importedModel = null;
+                this.defaultModelGroup = new THREE.Group();
+                this.isUsingDefaultModel = true;
+                this.isBeingDragged = false;
+                this.rotationOffset = 0;
 
                 // Body
                 const bodyGeometry = new THREE.BoxGeometry(2, 1, 3);
@@ -1347,7 +2078,6 @@
                 this.body.position.y = 0.5;
                 this.defaultModelGroup.add(this.body);
 
-                // Top indicator
                 const indicatorGeometry = new THREE.CylinderGeometry(0.3, 0.3, 0.2, 16);
                 const indicatorMaterial = new THREE.MeshStandardMaterial({
                     color: this.loaded ? 0xff6b00 : 0x00ff00,
@@ -1358,7 +2088,6 @@
                 this.indicator.position.y = 1.2;
                 this.defaultModelGroup.add(this.indicator);
 
-                // Wheels
                 const wheelGeometry = new THREE.CylinderGeometry(0.3, 0.3, 0.2, 16);
                 const wheelMaterial = new THREE.MeshStandardMaterial({ color: 0x222222 });
                 const wheelPositions = [
@@ -1377,7 +2106,6 @@
                     this.wheels.push(wheel);
                 });
 
-                // Direction arrow
                 const arrowGeometry = new THREE.ConeGeometry(0.2, 0.8, 8);
                 const arrowMaterial = new THREE.MeshStandardMaterial({ color: 0xffff00 });
                 this.arrow = new THREE.Mesh(arrowGeometry, arrowMaterial);
@@ -1385,38 +2113,118 @@
                 this.arrow.rotation.x = -Math.PI / 2;
                 this.defaultModelGroup.add(this.arrow);
                 
-                // Thêm default model vào group
                 this.group.add(this.defaultModelGroup);
 
-                // Set initial position
-                this.group.position.set(this.currentX, 0, this.currentZ);
+                // Vị trí ban đầu: x,z từ curve, y = elevation tầng (AGV đứng trên sàn)
+                this.group.position.set(this.currentX, floorElevation, this.currentZ);
 
                 scene.add(this.group);
 
-                // Create path visualization
-                const pathVisual = createPathLine(this.path, this.color);
+                // Path visualization theo elevation tầng
+                const pathVisual = createPathLine(pathObj, this.color, pathElevation);
                 this.pathLine = pathVisual.line;
                 this.pathMarkers = pathVisual.markers;
                 this.showPath = true;
             }
 
             update() {
-                // Nếu đang được kéo bằng TransformControls, không di chuyển theo path
                 if (this.isBeingDragged) {
-                    // Cập nhật currentX và currentZ từ vị trí hiện tại của group
                     this.currentX = this.group.position.x;
                     this.currentZ = this.group.position.z;
-                    // Cập nhật rotationY từ góc xoay hiện tại của group
                     this.rotationY = this.group.rotation.y;
-                    // Không cập nhật bánh xe khi đang kéo
                     return;
                 }
-                
-                // Cập nhật vị trí trên curve
+
+                const floorY = getFloorElevation(this.currentFloorId);
+                const moveSpeed = 0.15;
+                const elevatorArrivalDist = 1.5;
+                const elevatorYStep = 0.08;
+
+                if (this.state === 'ENTERING_ELEVATOR') {
+                    const dx = this.elevatorTargetX - this.group.position.x;
+                    const dz = this.elevatorTargetZ - this.group.position.z;
+                    const dist = Math.sqrt(dx * dx + dz * dz);
+                    if (dist < elevatorArrivalDist) {
+                        this.state = 'IN_ELEVATOR';
+                        this.elevatorTweenProgress = 0;
+                        this.elevatorFromY = getFloorElevation(this.currentFloorId);
+                        this.elevatorToY = getFloorElevation(this.nextFloorId);
+                    } else {
+                        const nx = this.group.position.x + (dx / dist) * moveSpeed;
+                        const nz = this.group.position.z + (dz / dist) * moveSpeed;
+                        this.group.position.set(nx, floorY, nz);
+                        this.currentX = nx;
+                        this.currentZ = nz;
+                    }
+                    this.group.rotation.y = this.rotationY;
+                    return;
+                }
+
+                if (this.state === 'IN_ELEVATOR') {
+                    this.elevatorTweenProgress += 0.015;
+                    if (this.elevatorTweenProgress >= 1) {
+                        this.currentFloorId = this.nextFloorId;
+                        this.state = 'EXITING_ELEVATOR';
+                    } else {
+                        const y = this.elevatorFromY + (this.elevatorToY - this.elevatorFromY) * this.elevatorTweenProgress;
+                        this.group.position.set(this.elevatorTargetX, y, this.elevatorTargetZ);
+                    }
+                    return;
+                }
+
+                if (this.state === 'EXITING_ELEVATOR') {
+                    const nextPath = pathDefinitions[this.nextFloorPathIndex];
+                    if (!nextPath) {
+                        this.state = 'MOVING';
+                        return;
+                    }
+                    this.pathObj = nextPath;
+                    this.path = nextPath.points;
+                    this.currentFloorId = nextPath.floorId || 'F1';
+                    const pathElevation = getPathElevation(nextPath);
+                    this.curve = createCurveFromPath(nextPath, true, pathElevation);
+                    this.curvePosition = 0;
+                    if (this.pathLine) {
+                        scene.remove(this.pathLine);
+                        this.pathLine.geometry.dispose();
+                        this.pathLine.material.dispose();
+                    }
+                    if (this.pathMarkers) {
+                        scene.remove(this.pathMarkers);
+                        this.pathMarkers.traverse(c => {
+                            if (c.geometry) c.geometry.dispose();
+                            if (c.material) c.material.dispose();
+                        });
+                    }
+                    const pathVisual = createPathLine(nextPath, this.color, pathElevation);
+                    this.pathLine = pathVisual.line;
+                    this.pathMarkers = pathVisual.markers;
+                    this.pathLine.visible = this.showPath;
+                    this.pathMarkers.visible = this.showPath;
+                    this.state = 'MOVING';
+                    return;
+                }
+
+                // MOVING
                 this.curvePosition += this.speed;
-                
-                // Nếu đến cuối curve và có loop, quay lại đầu
+
                 if (this.curvePosition >= 1.0) {
+                    const pathObj = this.pathObj;
+                    const hasElevator = pathObj && pathObj.elevatorExitAtEnd && pathObj.nextFloorPathIndex != null && pathDefinitions[pathObj.nextFloorPathIndex];
+                    if (hasElevator) {
+                        const nextPath = pathDefinitions[pathObj.nextFloorPathIndex];
+                        const nextFloorId = nextPath.floorId || 'F1';
+                        const elevator = elevators.find(e => e.floorIds.includes(this.currentFloorId) && e.floorIds.includes(nextFloorId));
+                        if (elevator && elevator.positions[this.currentFloorId]) {
+                            const pos = elevator.positions[this.currentFloorId];
+                            this.elevatorTargetX = pos.x;
+                            this.elevatorTargetZ = pos.z;
+                            this.nextFloorPathIndex = pathObj.nextFloorPathIndex;
+                            this.nextFloorId = nextFloorId;
+                            this.state = 'ENTERING_ELEVATOR';
+                            return;
+                        }
+                    }
                     if (this.loopPath) {
                         this.curvePosition = this.curvePosition % 1.0;
                     } else {
@@ -1425,35 +2233,32 @@
                         return;
                     }
                 }
-                
-                // Lấy vị trí hiện tại trên curve
+
                 const currentPos = this.curve.getPointAt(this.curvePosition);
                 this.currentX = currentPos.x;
                 this.currentZ = currentPos.z;
-                
-                // Chỉ tính toán góc quay từ tangent nếu không có góc xoay tùy chỉnh
-                if (!this.hasCustomRotation) {
-                    // Lấy tangent (hướng) tại vị trí hiện tại trên curve
-                    const tangent = this.curve.getTangentAt(this.curvePosition);
-                    
-                    // Tính góc quay từ tangent vector
-                    this.rotationY = Math.atan2(tangent.x, tangent.z);
-                }
-                // Nếu có góc xoay tùy chỉnh, giữ nguyên rotationY đã lưu
-
-                // Cập nhật vị trí và rotation
-                this.group.position.set(this.currentX, 0, this.currentZ);
+                const tangent = this.curve.getTangentAt(this.curvePosition);
+                const pathRotation = Math.atan2(tangent.x, tangent.z);
+                this.rotationY = pathRotation + this.rotationOffset;
+                this.group.position.set(this.currentX, floorY, this.currentZ);
                 this.group.rotation.y = this.rotationY;
 
-                // Quay bánh xe (tốc độ quay dựa trên tốc độ di chuyển)
-                const wheelSpeed = this.speed * 2000; // Điều chỉnh tốc độ quay bánh xe
-                this.wheels.forEach(wheel => {
-                    wheel.rotation.x += wheelSpeed;
-                });
-
-                // Cập nhật pin (giảm từ từ)
+                const wheelSpeed = this.speed * 2000;
+                this.wheels.forEach(wheel => { wheel.rotation.x += wheelSpeed; });
                 this.battery -= 0.001;
                 if (this.battery < 0) this.battery = 0;
+                if (typeof endpoints !== 'undefined') {
+                    const threshold = 4;
+                    endpoints.forEach(ep => {
+                        if (ep.floorId !== this.currentFloorId || this.visitedEndpointIds.has(ep.id)) return;
+                        const pos = getEndpointPosition(ep);
+                        const dx = this.group.position.x - pos.x, dz = this.group.position.z - pos.z;
+                        if (dx * dx + dz * dz < threshold * threshold) {
+                            this.visitedEndpointIds.add(ep.id);
+                            if (typeof onEndpointReached === 'function') onEndpointReached(this.id, ep.id);
+                        }
+                    });
+                }
             }
 
             remove() {
@@ -1589,11 +2394,13 @@
         let stats = null;
         if (typeof Stats !== 'undefined') {
             stats = new Stats();
-            stats.showPanel(0); // 0: fps, 1: ms, 2: mb
+            stats.showPanel(0);
             stats.dom.style.position = 'absolute';
-            stats.dom.style.top = '20px';
-            stats.dom.style.left = '20px';
-            document.body.appendChild(stats.dom);
+            stats.dom.style.top = '8px';
+            stats.dom.style.left = '8px';
+            stats.dom.style.zIndex = '10';
+            const mainEl = document.querySelector('.main');
+            if (mainEl) mainEl.appendChild(stats.dom); else document.body.appendChild(stats.dom);
         } else {
             console.warn('Stats.js không khả dụng. FPS counter sẽ không hiển thị.');
             // Tạo fake stats object để tránh lỗi
@@ -1603,29 +2410,7 @@
             };
         }
         
-        // dat.GUI cho controls với fallback
-        let gui = null;
-        if (typeof dat !== 'undefined' && typeof dat.GUI !== 'undefined') {
-            gui = new dat.GUI({ autoPlace: false });
-            gui.domElement.style.position = 'absolute';
-            gui.domElement.style.top = '20px';
-            gui.domElement.style.right = '20px';
-            gui.domElement.style.zIndex = '1000';
-            document.body.appendChild(gui.domElement);
-        } else {
-            console.warn('dat.GUI không khả dụng. Sẽ sử dụng controls HTML.');
-            // Tạo fallback controls HTML
-            const controlsDiv = document.createElement('div');
-            controlsDiv.id = 'controls';
-            controlsDiv.style.cssText = 'position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.7); color: white; padding: 15px 20px; border-radius: 8px; z-index: 1000;';
-            controlsDiv.innerHTML = `
-                <button onclick="toggleAnimation()" style="background: #4CAF50; color: white; border: none; padding: 8px 16px; margin: 5px; border-radius: 4px; cursor: pointer;">Tạm dừng/Tiếp tục</button>
-                <button onclick="resetCamera()" style="background: #4CAF50; color: white; border: none; padding: 8px 16px; margin: 5px; border-radius: 4px; cursor: pointer;">Reset Camera</button>
-                <button onclick="addRandomAGV()" style="background: #4CAF50; color: white; border: none; padding: 8px 16px; margin: 5px; border-radius: 4px; cursor: pointer;">Thêm AGV (dùng path đã chọn)</button>
-                <button onclick="togglePaths()" style="background: #2196F3; color: white; border: none; padding: 8px 16px; margin: 5px; border-radius: 4px; cursor: pointer;">Ẩn Path</button>
-            `;
-            document.body.appendChild(controlsDiv);
-        }
+        let gui = null; // Không dùng dat.GUI nữa; giữ biến cho tương thích
         
         // Hàm import model từ file cho AGV
         function importAGVModelFromFile(agv, file) {
@@ -1757,10 +2542,12 @@
         const config = {
             animation: true,
             showPaths: true,
-            cameraType: 'Orthographic', // 'Orthographic' or 'Perspective'
-            selectedPathIndex: 0, // Index của path đã chọn
-            selectedPathName: pathNames[0], // Tên path để hiển thị
-            isCreatingPath: false, // Mode tạo path mới
+            cameraType: 'Orthographic',
+            selectedPathIndex: 0,
+            selectedPathName: pathNames[0] || '',
+            currentFloorId: building.floors[0].id, // Tầng khi tạo path mới
+            isCreatingPath: false,
+            newPathType: 'bezier',
             agvSpeed: 1.0,
             addAGV: () => {
                 if (config.selectedPathIndex !== undefined && config.selectedPathIndex >= 0 && config.selectedPathIndex < pathDefinitions.length) {
@@ -1849,76 +2636,175 @@
             }
         };
         
-        // Chỉ khởi tạo dat.GUI nếu có sẵn
-        if (gui) {
-            gui.add(config, 'animation').name('Animation').onChange(val => {
-                animationPaused = !val;
-            });
-            gui.add(config, 'showPaths').name('Hiện Path').onChange(val => {
-                togglePaths(val);
-            });
-            gui.add(config, 'cameraType', ['Orthographic', 'Perspective']).name('Loại Camera').onChange(val => {
-                if ((val === 'Orthographic' && !isOrthographic) || (val === 'Perspective' && isOrthographic)) {
-                    toggleCamera();
-                }
-            });
-            gui.add(config, 'selectedPathName', pathNames).name('Chọn Path').onChange(val => {
-                // Cập nhật selectedPathIndex khi chọn path
-                const index = pathNames.indexOf(val);
-                if (index !== -1) {
-                    config.selectedPathIndex = index;
-                }
-            });
-            gui.add(config, 'agvSpeed', 0.1, 3.0).name('Tốc độ AGV').onChange(val => {
-                agvs.forEach(agv => agv.speed = val * 0.0005);
-            });
-            gui.add(config, 'addAGV').name('Thêm AGV');
-            gui.add(config, 'resetCamera').name('Reset Camera');
-            
-            // Folder cho quản lý AGV Model
-            const agvModelFolder = gui.addFolder('AGV Model');
-            // Sử dụng biến agvInfo đã được khai báo ở trên
-            agvModelFolder.add(agvInfo, 'selectedAGVId').name('AGV Đã Chọn').listen();
-            agvModelFolder.add(agvInfo, 'hasImportedModel').name('Có Model Import').listen();
-            agvModelFolder.add(config, 'importAGVModel').name('Import Model cho AGV');
-            agvModelFolder.add(config, 'removeAGVModel').name('Xóa Model (Về Default)');
-            agvModelFolder.open();
-            
-            // Folder cho tạo path mới
-            const pathFolder = gui.addFolder('Tạo Path Mới');
-            pathFolder.add(config, 'isCreatingPath').name('Bắt Đầu Tạo Path').onChange(val => {
-                if (val) {
-                    startCreatingPath();
-                } else {
-                    cancelCreatingPath();
-                }
-            });
-            pathFolder.add({ finishPath: () => finishCreatingPath() }, 'finishPath').name('Hoàn Thành Path');
-            pathFolder.add({ cancelPath: () => cancelCreatingPath() }, 'cancelPath').name('Hủy Tạo Path');
-            pathFolder.add({ waypointCount: () => newPathWaypoints.length }, 'waypointCount').name('Số Waypoint').listen();
-            pathFolder.open();
-            
-            // Folder cho khối
-            const blockFolder = gui.addFolder('Khối trên Map');
-            blockFolder.add(config, 'addBlock').name('Tạo Khối Mới (Cube)');
-            blockFolder.add(config, 'importObject').name('Import Đối Tượng 3D');
-            blockFolder.add(config, 'deleteSelectedBlock').name('Xóa Khối Đã Chọn');
-            blockFolder.add(config, 'clearAllBlocks').name('Xóa Tất Cả');
-            blockFolder.add(config, 'transformMode', ['translate', 'rotate', 'scale']).name('Chế Độ').onChange(val => {
-                setTransformMode(val);
-            });
-            blockFolder.add(config, 'blockCount').name('Số Lượng Khối').listen();
-            blockFolder.open();
+        // Studio: đồng bộ path options với path đã chọn
+        const studioPathOptions = { elevatorExitAtEnd: false, nextFloorPathIndex: 0 };
+        function syncStudioPathOptions() {
+            const p = pathDefinitions[config.selectedPathIndex];
+            if (p) {
+                studioPathOptions.elevatorExitAtEnd = !!p.elevatorExitAtEnd;
+                studioPathOptions.nextFloorPathIndex = p.nextFloorPathIndex != null ? p.nextFloorPathIndex : 0;
+            }
         }
+        function applyStudioPathOptions() {
+            const p = pathDefinitions[config.selectedPathIndex];
+            if (p) {
+                p.elevatorExitAtEnd = studioPathOptions.elevatorExitAtEnd;
+                p.nextFloorPathIndex = studioPathOptions.nextFloorPathIndex;
+            }
+        }
+        
+        // Giao diện desktop: sidebar với panel cấu hình
+        function refreshDesktopUI() {
+            const pathSelect = document.getElementById('desktopPathSelect');
+            if (pathSelect) {
+                const cur = pathSelect.value;
+                pathSelect.innerHTML = pathNames.map((name, i) => '<option value="' + i + '">' + (name || 'Path ' + (i + 1)) + '</option>').join('') || '<option value="">-- Chưa có path --</option>';
+                pathSelect.value = (config.selectedPathIndex >= 0 && config.selectedPathIndex < pathNames.length) ? config.selectedPathIndex : '';
+            }
+            const floorSelect = document.getElementById('desktopFloorSelect');
+            if (floorSelect) {
+                floorSelect.innerHTML = building.floors.map(f => '<option value="' + f.id + '">' + f.name + '</option>').join('');
+                floorSelect.value = config.currentFloorId || (building.floors[0] && building.floors[0].id);
+            }
+            const agvInfoEl = document.getElementById('desktopAgvInfo');
+            if (agvInfoEl) agvInfoEl.textContent = agvInfo.selectedAGVId || 'Chưa chọn AGV';
+            const pathCountEl = document.getElementById('statusPath');
+            if (pathCountEl) pathCountEl.textContent = 'Path: ' + pathNames.length;
+            const floorCountEl = document.getElementById('statusFloor');
+            if (floorCountEl) floorCountEl.textContent = 'Tầng: ' + building.floors.length;
+            syncStudioPathOptions();
+            const elevatorCb = document.getElementById('desktopElevatorExit');
+            const nextIdx = document.getElementById('desktopNextPathIndex');
+            if (elevatorCb) elevatorCb.checked = studioPathOptions.elevatorExitAtEnd;
+            if (nextIdx) { nextIdx.value = studioPathOptions.nextFloorPathIndex; nextIdx.max = Math.max(0, pathDefinitions.length - 1); }
+        }
+        function initDesktopUI() {
+            const sidebar = document.getElementById('sidebarContent');
+            if (!sidebar) return;
+            sidebar.innerHTML = `
+                <div class="panel open" data-panel="view">
+                    <div class="panel-header">Xem 3D</div>
+                    <div class="panel-body">
+                        <div class="form-row checkbox-row"><label><input type="checkbox" id="desktopAnimation" checked /> Animation</label></div>
+                        <div class="form-row checkbox-row"><label><input type="checkbox" id="desktopShowPaths" checked /> Hiện path</label></div>
+                        <div class="form-row"><label class="form-label">Camera</label><select id="desktopCamera"><option value="Orthographic">Orthographic</option><option value="Perspective">Perspective</option></select></div>
+                        <div class="form-row"><button class="btn btn-secondary" id="desktopResetCam">Reset camera</button></div>
+                    </div>
+                </div>
+                <div class="panel open" data-panel="path">
+                    <div class="panel-header">Path</div>
+                    <div class="panel-body">
+                        <div class="form-row"><label class="form-label">Chọn path</label><select id="desktopPathSelect"></select></div>
+                        <div class="form-row"><label class="form-label">Tốc độ AGV</label><input type="range" id="desktopAgvSpeed" min="0.1" max="3" step="0.1" value="1" /><span id="desktopAgvSpeedVal">1</span></div>
+                        <div class="form-row"><button class="btn btn-success" id="desktopAddAGV">Thêm AGV</button></div>
+                    </div>
+                </div>
+                <div class="panel" data-panel="createpath">
+                    <div class="panel-header">Tạo path mới</div>
+                    <div class="panel-body">
+                        <div class="form-row"><label class="form-label">Tầng</label><select id="desktopFloorSelect"></select></div>
+                        <div class="form-row"><label class="form-label">Loại segment</label><select id="desktopPathType"><option value="linear">Thẳng</option><option value="bezier">Cong</option></select></div>
+                        <div class="form-row"><button class="btn btn-secondary" id="desktopStartPath">Bắt đầu tạo path</button></div>
+                        <div class="form-row"><button class="btn btn-success" id="desktopFinishPath">Hoàn thành</button><button class="btn btn-danger" id="desktopCancelPath">Hủy</button></div>
+                        <div class="form-row"><span class="form-label">Waypoint: <span id="desktopWaypointCount">0</span></span></div>
+                    </div>
+                </div>
+                <div class="panel" data-panel="agv">
+                    <div class="panel-header">AGV</div>
+                    <div class="panel-body">
+                        <div class="form-row"><label class="form-label">AGV đã chọn</label><span id="desktopAgvInfo">Chưa chọn AGV</span></div>
+                        <div class="form-row"><button class="btn btn-secondary" id="desktopImportAGVModel">Import model</button><button class="btn btn-danger" id="desktopRemoveAGVModel">Xóa model</button></div>
+                    </div>
+                </div>
+                <div class="panel" data-panel="studio">
+                    <div class="panel-header">Nhà xưởng &amp; Cấu hình</div>
+                    <div class="panel-body">
+                        <div class="form-row"><button class="btn btn-secondary" id="desktopAddFloor">Thêm tầng</button><button class="btn btn-danger" id="desktopRemoveFloor">Xóa tầng cuối</button></div>
+                        <div class="form-row"><button class="btn btn-secondary" id="desktopApplyFloors">Áp dụng sàn/thang</button></div>
+                        <div class="form-row checkbox-row"><label><input type="checkbox" id="desktopElevatorExit" /> Path: cuối = vào thang</label></div>
+                        <div class="form-row"><label class="form-label">Path tầng tiếp (index)</label><input type="number" id="desktopNextPathIndex" min="0" value="0" style="width:100%;padding:6px;background:#3c3c3c;border:1px solid #555;color:#d4d4d4;" /></div>
+                        <div class="form-row"><button class="btn btn-secondary" id="desktopAddEndpoint">Thêm endpoint</button> <span id="desktopEndpointCount">0</span></div>
+                        <div class="form-row"><button class="btn btn-success" id="desktopSaveConfig">Lưu cấu hình</button><button class="btn btn-secondary" id="desktopLoadConfig">Tải cấu hình</button></div>
+                    </div>
+                </div>
+                <div class="panel" data-panel="blocks">
+                    <div class="panel-header">Khối / Đối tượng</div>
+                    <div class="panel-body">
+                        <div class="form-row"><button class="btn btn-secondary" id="desktopAddBlock">Tạo khối</button><button class="btn btn-secondary" id="desktopImportObject">Import 3D</button></div>
+                        <div class="form-row"><button class="btn btn-danger" id="desktopDeleteBlock">Xóa đã chọn</button><button class="btn btn-danger" id="desktopClearBlocks">Xóa tất cả</button></div>
+                        <div class="form-row"><label class="form-label">Chế độ</label><select id="desktopTransformMode"><option value="translate">Di chuyển</option><option value="rotate">Xoay</option><option value="scale">Tỷ lệ</option></select></div>
+                        <div class="form-row"><span class="form-label">Số khối: <span id="desktopBlockCount">0</span></span></div>
+                    </div>
+                </div>
+            `;
+            sidebar.querySelectorAll('.panel-header').forEach(h => {
+                h.addEventListener('click', () => {
+                    const p = h.closest('.panel');
+                    p.classList.toggle('open');
+                });
+            });
+            document.getElementById('desktopAnimation').addEventListener('change', e => { animationPaused = !e.target.checked; });
+            document.getElementById('desktopShowPaths').addEventListener('change', e => { togglePaths(e.target.checked); });
+            document.getElementById('desktopCamera').addEventListener('change', e => {
+                if ((e.target.value === 'Orthographic' && !isOrthographic) || (e.target.value === 'Perspective' && isOrthographic)) toggleCamera();
+            });
+            document.getElementById('desktopResetCam').addEventListener('click', () => resetCamera());
+            document.getElementById('desktopPathSelect').addEventListener('change', e => {
+                const i = parseInt(e.target.value, 10);
+                if (!isNaN(i) && i >= 0 && i < pathNames.length) { config.selectedPathIndex = i; config.selectedPathName = pathNames[i]; refreshDesktopUI(); }
+            });
+            document.getElementById('desktopAgvSpeed').addEventListener('input', e => { config.agvSpeed = parseFloat(e.target.value); document.getElementById('desktopAgvSpeedVal').textContent = e.target.value; agvs.forEach(agv => agv.speed = config.agvSpeed * 0.0005); });
+            document.getElementById('desktopAddAGV').addEventListener('click', () => config.addAGV());
+            document.getElementById('desktopFloorSelect').addEventListener('change', e => { config.currentFloorId = e.target.value; if (isCreatingPath) updateNewPathPreview(); });
+            document.getElementById('desktopPathType').addEventListener('change', e => { newPathType = e.target.value; config.newPathType = e.target.value; if (isCreatingPath && newPathWaypoints.length >= 2) updateNewPathPreview(); });
+            document.getElementById('desktopStartPath').addEventListener('click', () => { config.isCreatingPath = true; newPathType = config.newPathType; startCreatingPath(); });
+            document.getElementById('desktopFinishPath').addEventListener('click', () => finishCreatingPath());
+            document.getElementById('desktopCancelPath').addEventListener('click', () => cancelCreatingPath());
+            document.getElementById('desktopImportAGVModel').addEventListener('click', () => config.importAGVModel());
+            document.getElementById('desktopRemoveAGVModel').addEventListener('click', () => config.removeAGVModel());
+            document.getElementById('desktopAddFloor').addEventListener('click', () => {
+                const n = building.floors.length + 1;
+                building.floors.push({ id: 'F' + n, name: 'Tầng ' + n, elevation: 10 * (n - 1), width: 200, depth: 200 });
+                rebuildFloorsAndElevators();
+                refreshDesktopUI();
+            });
+            document.getElementById('desktopRemoveFloor').addEventListener('click', () => {
+                if (building.floors.length <= 1) { alert('Cần ít nhất 1 tầng'); return; }
+                const last = building.floors[building.floors.length - 1];
+                if (pathDefinitions.some(p => p.floorId === last.id) || agvs.some(a => a.currentFloorId === last.id)) { alert('Tầng đang được path/AGV sử dụng'); return; }
+                building.floors.pop();
+                rebuildFloorsAndElevators();
+                refreshDesktopUI();
+            });
+            document.getElementById('desktopApplyFloors').addEventListener('click', () => rebuildFloorsAndElevators());
+            document.getElementById('desktopElevatorExit').addEventListener('change', e => { studioPathOptions.elevatorExitAtEnd = e.target.checked; applyStudioPathOptions(); });
+            document.getElementById('desktopNextPathIndex').addEventListener('change', e => { studioPathOptions.nextFloorPathIndex = parseInt(e.target.value, 10) || 0; applyStudioPathOptions(); });
+            document.getElementById('desktopAddEndpoint').addEventListener('click', () => addEndpoint({ type: 'standalone', x: 0, z: 0, floorId: building.floors[0] ? building.floors[0].id : 'F1' }));
+            document.getElementById('desktopSaveConfig').addEventListener('click', () => saveStudioConfig());
+            document.getElementById('desktopLoadConfig').addEventListener('click', () => { const input = document.createElement('input'); input.type = 'file'; input.accept = '.json'; input.onchange = (e) => { const f = e.target.files[0]; if (f) { const r = new FileReader(); r.onload = () => loadStudioConfig(r.result); r.readAsText(f); } }; input.click(); });
+            document.getElementById('desktopAddBlock').addEventListener('click', () => config.addBlock());
+            document.getElementById('desktopImportObject').addEventListener('click', () => config.importObject());
+            document.getElementById('desktopDeleteBlock').addEventListener('click', () => config.deleteSelectedBlock());
+            document.getElementById('desktopClearBlocks').addEventListener('click', () => config.clearAllBlocks());
+            document.getElementById('desktopTransformMode').addEventListener('change', e => setTransformMode(e.target.value));
+            syncStudioPathOptions();
+            document.getElementById('desktopElevatorExit').checked = studioPathOptions.elevatorExitAtEnd;
+            document.getElementById('desktopNextPathIndex').value = studioPathOptions.nextFloorPathIndex;
+            refreshDesktopUI();
+        }
+        function tickDesktopUI() {
+            const waypointEl = document.getElementById('desktopWaypointCount');
+            if (waypointEl) waypointEl.textContent = newPathWaypoints.length;
+            const blockEl = document.getElementById('desktopBlockCount');
+            if (blockEl) blockEl.textContent = blocks.length;
+            const endpointEl = document.getElementById('desktopEndpointCount');
+            if (endpointEl) endpointEl.textContent = endpoints.length;
+            const agvInfoEl = document.getElementById('desktopAgvInfo');
+            if (agvInfoEl) agvInfoEl.textContent = agvInfo.selectedAGVId || 'Chưa chọn AGV';
+        }
+        initDesktopUI();
 
-        // Create initial AGVs with paths
-        const colors = [0x4CAF50, 0x2196F3, 0xFF9800, 0xF44336, 0x9C27B0, 0x00BCD4];
-        for (let i = 0; i < 5; i++) {
-            const pathIndex = i % pathDefinitions.length;
-            const path = pathDefinitions[pathIndex];
-            const color = colors[i % colors.length];
-            agvs.push(new AGV(`AGV-${String(i + 1).padStart(3, '0')}`, path, color));
-        }
+        // Không tạo AGV mặc định — người dùng thêm AGV sau khi đã tạo path
 
         // Labels for AGVs
         const labels = [];
@@ -1943,13 +2829,12 @@
         }
 
         function updateLabelPositions() {
+            const rect = renderer.domElement.getBoundingClientRect();
             labels.forEach(({ element, agv }) => {
                 const vector = new THREE.Vector3(agv.currentX, 2, agv.currentZ);
                 vector.project(camera);
-
-                const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
-                const y = (-vector.y * 0.5 + 0.5) * window.innerHeight;
-
+                const x = rect.left + (vector.x * 0.5 + 0.5) * rect.width;
+                const y = rect.top + (-vector.y * 0.5 + 0.5) * rect.height;
                 element.style.left = x + 'px';
                 element.style.top = y + 'px';
             });
@@ -1973,9 +2858,8 @@
             updateLabelPositions();
             renderer.render(scene, camera);
             
-            // Update active count
             document.getElementById('activeCount').textContent = agvs.length;
-            
+            if (typeof tickDesktopUI === 'function') tickDesktopUI();
             stats.end();
         }
 
@@ -2045,13 +2929,12 @@
 
         let pathsVisible = true;
 
-        // Handle window resize
+        // Handle window resize (aspect theo vùng 3D để không bị cắt)
         window.addEventListener('resize', () => {
-            const aspect = window.innerWidth / window.innerHeight;
+            const vs = getViewSize();
+            const aspect = vs.w / Math.max(1, vs.h);
             
-            // Update camera dựa trên loại camera hiện tại
             if (isOrthographic) {
-                // Update OrthographicCamera
                 const viewSize = 100;
                 orthographicCamera.left = -viewSize * aspect;
                 orthographicCamera.right = viewSize * aspect;
@@ -2059,13 +2942,10 @@
                 orthographicCamera.bottom = -viewSize;
                 orthographicCamera.updateProjectionMatrix();
             } else {
-                // Update PerspectiveCamera
                 perspectiveCamera.aspect = aspect;
                 perspectiveCamera.updateProjectionMatrix();
             }
-            
-            // Update renderer
-            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setSize(vs.w, vs.h);
         });
         
         // Keyboard shortcuts cho tạo path
