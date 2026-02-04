@@ -135,43 +135,48 @@
     <script src="https://cdn.jsdelivr.net/npm/stats.js@0.17.0/build/stats.min.js"></script>
     
     <script>
-        // Kiểm tra loaders đã được load chưa
-        function checkLoaders() {
-            const loaders = {
-                GLTFLoader: typeof THREE !== 'undefined' && typeof THREE.GLTFLoader !== 'undefined',
-                OBJLoader: typeof THREE !== 'undefined' && typeof THREE.OBJLoader !== 'undefined',
-                FBXLoader: typeof THREE !== 'undefined' && typeof THREE.FBXLoader !== 'undefined'
-            };
+        // Helper functions để giảm boilerplate
+        const Helpers = {
+            createMesh: (geometry, material, position = [0, 0, 0], castShadow = false, receiveShadow = false) => {
+                const mesh = new THREE.Mesh(geometry, material);
+                mesh.position.set(...position);
+                mesh.castShadow = castShadow;
+                mesh.receiveShadow = receiveShadow;
+                return mesh;
+            },
             
-            if (!loaders.GLTFLoader) {
-                console.warn('GLTFLoader chưa được load. Import GLTF/GLB sẽ không hoạt động.');
-            }
-            if (!loaders.OBJLoader) {
-                console.warn('OBJLoader chưa được load. Import OBJ sẽ không hoạt động.');
-            }
-            if (!loaders.FBXLoader) {
-                console.warn('FBXLoader chưa được load. Import FBX sẽ không hoạt động.');
-            }
+            createBox: (size, material, position = [0, 0, 0]) => {
+                const geometry = new THREE.BoxGeometry(...size);
+                return Helpers.createMesh(geometry, material, position, true, true);
+            },
+
+            getViewSize: () => {
+                const el = document.querySelector('.main') || document.getElementById('container');
+                return el ? { w: el.clientWidth || window.innerWidth, h: el.clientHeight || window.innerHeight } : { w: window.innerWidth, h: window.innerHeight };
+            },
             
-            return loaders;
-        }
-        
+            animateCamera: (camera, target, duration = 1) => {
+                if (typeof gsap !== 'undefined') {
+                    gsap.to(camera.position, {
+                        x: target.x,
+                        y: target.y,
+                        z: target.z,
+                        duration: duration,
+                        ease: "power2.inOut"
+                    });
+                } else {
+                    // Fallback: set trực tiếp
+                    camera.position.set(target.x, target.y, target.z);
+                }
+            }
+        };
         // Scene setup
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x1a1a1a);
-        scene.fog = new THREE.Fog(0x1a1a1a, 100, 500);
+        scene.background = new THREE.Color(0x021324);
+        scene.fog = new THREE.Fog(0x021324, 100, 500);
         
-        // Kiểm tra loaders sau khi Three.js đã load
-        setTimeout(() => {
-            checkLoaders();
-        }, 1000);
 
-        // Kích thước vùng 3D (dùng cho camera aspect, tránh bị cắt khi có sidebar)
-        function getViewSize() {
-            const el = document.querySelector('.main') || document.getElementById('container');
-            return el ? { w: el.clientWidth || window.innerWidth, h: el.clientHeight || window.innerHeight } : { w: window.innerWidth, h: window.innerHeight };
-        }
-        const viewSizePx = getViewSize();
+        const viewSizePx = Helpers.getViewSize();
         const aspect = viewSizePx.w / Math.max(1, viewSizePx.h);
         const viewSize = 100;
         
@@ -184,7 +189,7 @@
             0.1,
             1000
         );
-        orthographicCamera.position.set(50, 50, 50);
+        orthographicCamera.position.set(100, 100, 100);
         orthographicCamera.lookAt(0, 0, 0);
         
         // PerspectiveCamera
@@ -194,7 +199,7 @@
             0.1,
             1000
         );
-        perspectiveCamera.position.set(50, 50, 50);
+        perspectiveCamera.position.set(100, 100, 100);
         perspectiveCamera.lookAt(0, 0, 0);
         
         // Camera hiện tại (mặc định là Orthographic)
@@ -203,7 +208,7 @@
 
         // Renderer (kích thước theo vùng 3D .main khi dùng layout desktop)
         const renderer = new THREE.WebGLRenderer({ antialias: true });
-        const initialSize = getViewSize();
+        const initialSize = Helpers.getViewSize();
         renderer.setSize(initialSize.w, initialSize.h);
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -245,7 +250,7 @@
             
             if (isOrthographic) {
                 camera = orthographicCamera;
-                const vs = getViewSize();
+                const vs = Helpers.getViewSize();
                 const aspect = vs.w / Math.max(1, vs.h);
                 const viewSize = currentZoom * 0.5;
                 orthographicCamera.left = -viewSize * aspect;
@@ -255,7 +260,7 @@
                 orthographicCamera.updateProjectionMatrix();
             } else {
                 camera = perspectiveCamera;
-                const vs = getViewSize();
+                const vs = Helpers.getViewSize();
                 perspectiveCamera.aspect = vs.w / Math.max(1, vs.h);
                 perspectiveCamera.updateProjectionMatrix();
             }
@@ -274,8 +279,8 @@
             controls.target.copy(currentTarget);
             controls.update();
             
-            // Cập nhật TransformControls với camera mới
-            if (transformControls) {
+            // Cập nhật TransformControls với camera mới (setCamera có từ phiên bản Three.js mới hơn)
+            if (transformControls && typeof transformControls.setCamera === 'function') {
                 transformControls.setCamera(camera);
             }
             
@@ -382,8 +387,9 @@
                         const segmentIndex = selectedControlPoint.segmentIndex;
                         const cpType = selectedControlPoint.controlPoint;
                         
-                        // Giữ Y cố định (chỉ di chuyển trên mặt phẳng)
-                        marker.position.y = 0.6;
+                        // Giữ Y theo tầng đang tạo path (chỉ di chuyển trên mặt phẳng)
+                        const pathY = (newPathWaypoints[segmentIndex] && newPathWaypoints[segmentIndex].y != null ? newPathWaypoints[segmentIndex].y : 0) + 0.1;
+                        marker.position.y = pathY + 0.5;
                         
                         if (newPathControlPoints[segmentIndex] && newPathControlPoints[segmentIndex][cpType]) {
                             // Cập nhật control point real-time
@@ -889,7 +895,10 @@
                     selectedControlPoint = null;
                 }
                 
-                const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+                // Mặt phẳng đặt waypoint theo đúng tầng đang chọn (tránh rơi xuống tầng 1)
+                const floorId = (typeof config !== 'undefined' && config.currentFloorId) ? config.currentFloorId : (building.floors[0] && building.floors[0].id);
+                const floorY = getFloorElevation(floorId || 'F1');
+                const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -floorY);
                 const intersectPoint = new THREE.Vector3();
                 raycaster.ray.intersectPlane(plane, intersectPoint);
                 if (Math.abs(intersectPoint.x) <= 100 && Math.abs(intersectPoint.z) <= 100) {
@@ -1041,36 +1050,7 @@
         renderer.domElement.addEventListener('mousemove', onMouseMove);
         renderer.domElement.addEventListener('mouseup', onMouseUp);
 
-        // Helper functions để giảm boilerplate
-        const Helpers = {
-            createMesh: (geometry, material, position = [0, 0, 0], castShadow = false, receiveShadow = false) => {
-                const mesh = new THREE.Mesh(geometry, material);
-                mesh.position.set(...position);
-                mesh.castShadow = castShadow;
-                mesh.receiveShadow = receiveShadow;
-                return mesh;
-            },
-            
-            createBox: (size, material, position = [0, 0, 0]) => {
-                const geometry = new THREE.BoxGeometry(...size);
-                return Helpers.createMesh(geometry, material, position, true, true);
-            },
-            
-            animateCamera: (camera, target, duration = 1) => {
-                if (typeof gsap !== 'undefined') {
-                    gsap.to(camera.position, {
-                        x: target.x,
-                        y: target.y,
-                        z: target.z,
-                        duration: duration,
-                        ease: "power2.inOut"
-                    });
-                } else {
-                    // Fallback: set trực tiếp
-                    camera.position.set(target.x, target.y, target.z);
-                }
-            }
-        };
+        
 
         // Lighting
         const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
@@ -1110,7 +1090,7 @@
             roughness: 0.8,
             metalness: 0.2
         });
-        const wallHeight = 5;
+        const wallHeight = 1;
         const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x555555, roughness: 0.7 });
         function createFloorsAndWalls() {
             building.floors.forEach((floorDef) => {
@@ -1484,6 +1464,11 @@
                 }
             }
             
+            // Đảm bảo waypoint có y đúng theo tầng đang chọn (nếu thiếu)
+            if (position.y == null || position.y === undefined) {
+                const floorId = (typeof config !== 'undefined' && config.currentFloorId) ? config.currentFloorId : (building.floors[0] && building.floors[0].id);
+                position.y = getFloorElevation(floorId || 'F1');
+            }
             // Push waypoint trước khi tạo control point markers để createControlPointMarkers có endpoint (4 điểm: start, cp1, cp2, end)
             newPathWaypoints.push(position);
             
@@ -1499,7 +1484,7 @@
             });
             const marker = new THREE.Mesh(markerGeometry, markerMaterial);
             marker.position.copy(position);
-            marker.position.y = 0.5;
+            marker.position.y = (position.y != null ? position.y : 0) + 0.5;
             newPathMarkers.add(marker);
             
             // Cập nhật preview line
@@ -1509,6 +1494,9 @@
         // Tạo markers cho control points
         function createControlPointMarkers(segmentIndex, cp1, cp2) {
             if (!newPathControlPointMarkers) return;
+            
+            const pathY = (newPathWaypoints[segmentIndex] && newPathWaypoints[segmentIndex].y != null ? newPathWaypoints[segmentIndex].y : 0) + 0.1;
+            const markerY = pathY + 0.5;
             
             // Xóa markers cũ của segment này nếu có
             const oldMarkers = newPathControlPointMarkers.children.filter(child => 
@@ -1527,7 +1515,7 @@
                 transparent: false
             });
             const cp1Marker = new THREE.Mesh(cp1Geometry, cp1Material);
-            cp1Marker.position.set(cp1.x, 0.6, cp1.z);
+            cp1Marker.position.set(cp1.x, markerY, cp1.z);
             cp1Marker.userData = { 
                 segmentIndex: segmentIndex, 
                 controlPoint: 'cp1',
@@ -1543,7 +1531,7 @@
                 transparent: false
             });
             const cp2Marker = new THREE.Mesh(cp2Geometry, cp2Material);
-            cp2Marker.position.set(cp2.x, 0.6, cp2.z);
+            cp2Marker.position.set(cp2.x, markerY, cp2.z);
             cp2Marker.userData = { 
                 segmentIndex: segmentIndex, 
                 controlPoint: 'cp2',
@@ -1563,8 +1551,8 @@
             // Đường từ waypoint đầu đến cp1
             const startWaypoint = newPathWaypoints[segmentIndex];
             const line1Points = [
-                new THREE.Vector3(startWaypoint.x, 0.2, startWaypoint.z),
-                new THREE.Vector3(cp1.x, 0.2, cp1.z)
+                new THREE.Vector3(startWaypoint.x, pathY, startWaypoint.z),
+                new THREE.Vector3(cp1.x, pathY, cp1.z)
             ];
             const line1Geometry = new THREE.BufferGeometry().setFromPoints(line1Points);
             const line1 = new THREE.Line(line1Geometry, lineMaterial);
@@ -1573,8 +1561,8 @@
             
             // Đường từ cp1 đến cp2
             const line2Points = [
-                new THREE.Vector3(cp1.x, 0.2, cp1.z),
-                new THREE.Vector3(cp2.x, 0.2, cp2.z)
+                new THREE.Vector3(cp1.x, pathY, cp1.z),
+                new THREE.Vector3(cp2.x, pathY, cp2.z)
             ];
             const line2Geometry = new THREE.BufferGeometry().setFromPoints(line2Points);
             const line2 = new THREE.Line(line2Geometry, lineMaterial);
@@ -1584,8 +1572,8 @@
             // Đường từ cp2 đến waypoint cuối
             const endWaypoint = newPathWaypoints[segmentIndex + 1];
             const line3Points = [
-                new THREE.Vector3(cp2.x, 0.2, cp2.z),
-                new THREE.Vector3(endWaypoint.x, 0.2, endWaypoint.z)
+                new THREE.Vector3(cp2.x, pathY, cp2.z),
+                new THREE.Vector3(endWaypoint.x, pathY, endWaypoint.z)
             ];
             const line3Geometry = new THREE.BufferGeometry().setFromPoints(line3Points);
             const line3 = new THREE.Line(line3Geometry, lineMaterial);
@@ -1599,6 +1587,8 @@
             
             const controlPoints = newPathControlPoints[segmentIndex];
             if (!controlPoints || !controlPoints.cp1 || !controlPoints.cp2) return;
+            
+            const pathY = (newPathWaypoints[segmentIndex] && newPathWaypoints[segmentIndex].y != null ? newPathWaypoints[segmentIndex].y : 0) + 0.1;
             
             // Tìm các đường nối của segment này
             const lines = newPathControlPointMarkers.children.filter(child => 
@@ -1626,8 +1616,8 @@
             
             // Đường từ waypoint đầu đến cp1
             const line1Points = [
-                new THREE.Vector3(startWaypoint.x, 0.2, startWaypoint.z),
-                new THREE.Vector3(controlPoints.cp1.x, 0.2, controlPoints.cp1.z)
+                new THREE.Vector3(startWaypoint.x, pathY, startWaypoint.z),
+                new THREE.Vector3(controlPoints.cp1.x, pathY, controlPoints.cp1.z)
             ];
             const line1Geometry = new THREE.BufferGeometry().setFromPoints(line1Points);
             const line1 = new THREE.Line(line1Geometry, lineMaterial);
@@ -1636,8 +1626,8 @@
             
             // Đường từ cp1 đến cp2
             const line2Points = [
-                new THREE.Vector3(controlPoints.cp1.x, 0.2, controlPoints.cp1.z),
-                new THREE.Vector3(controlPoints.cp2.x, 0.2, controlPoints.cp2.z)
+                new THREE.Vector3(controlPoints.cp1.x, pathY, controlPoints.cp1.z),
+                new THREE.Vector3(controlPoints.cp2.x, pathY, controlPoints.cp2.z)
             ];
             const line2Geometry = new THREE.BufferGeometry().setFromPoints(line2Points);
             const line2 = new THREE.Line(line2Geometry, lineMaterial);
@@ -1646,8 +1636,8 @@
             
             // Đường từ cp2 đến waypoint cuối
             const line3Points = [
-                new THREE.Vector3(controlPoints.cp2.x, 0.2, controlPoints.cp2.z),
-                new THREE.Vector3(endWaypoint.x, 0.2, endWaypoint.z)
+                new THREE.Vector3(controlPoints.cp2.x, pathY, controlPoints.cp2.z),
+                new THREE.Vector3(endWaypoint.x, pathY, endWaypoint.z)
             ];
             const line3Geometry = new THREE.BufferGeometry().setFromPoints(line3Points);
             const line3 = new THREE.Line(line3Geometry, lineMaterial);
@@ -1737,12 +1727,38 @@
             scene.add(newPathPreview);
         }
         
+        // Cập nhật tất cả điểm tạm thời (waypoints, markers, control points) theo tầng đang chọn
+        function updateTemporaryPathPointsElevation() {
+            if (!isCreatingPath || newPathWaypoints.length === 0) return;
+            const floorId = (typeof config !== 'undefined' && config.currentFloorId) ? config.currentFloorId : (building.floors[0] && building.floors[0].id);
+            const floorY = getFloorElevation(floorId || 'F1');
+            
+            // Cập nhật y cho từng waypoint
+            newPathWaypoints.forEach(wp => { wp.y = floorY; });
+            
+            // Cập nhật y cho từng marker waypoint (sphere xanh)
+            if (newPathMarkers && newPathMarkers.children.length === newPathWaypoints.length) {
+                newPathMarkers.children.forEach((marker, i) => {
+                    marker.position.y = floorY + 0.5;
+                });
+            }
+            
+            // Tạo lại control point markers để có đúng y theo tầng
+            newPathControlPoints.forEach((cp, segmentIndex) => {
+                if (cp && cp.cp1 && cp.cp2) {
+                    createControlPointMarkers(segmentIndex, cp.cp1, cp.cp2);
+                }
+            });
+            
+            updateNewPathPreview();
+        }
+        
         // Xử lý click để thêm waypoint (sẽ được gọi từ raycaster)
         function handlePathCreationClick(intersectPoint) {
             if (!isCreatingPath) return;
             
-            // Chuyển điểm intersect thành Vector3 với y = 0
-            const waypoint = new THREE.Vector3(intersectPoint.x, 0, intersectPoint.z);
+            // Giữ đúng y từ mặt phẳng tầng đang chọn (intersectPoint đã có y đúng)
+            const waypoint = new THREE.Vector3(intersectPoint.x, intersectPoint.y, intersectPoint.z);
             addWaypointToNewPath(waypoint);
         }
 
@@ -1997,11 +2013,11 @@
                 marker.rotation.x = -Math.PI / 2;
                 markers.add(marker);
                 
-                // Add number label (simple sphere for now)
+                // Add number label (simple sphere for now) — cùng độ cao tầng với marker
                 const labelGeometry = new THREE.SphereGeometry(0.3, 8, 8);
                 const labelMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });
                 const label = new THREE.Mesh(labelGeometry, labelMaterial);
-                label.position.set(point.x, 0.5, point.z);
+                label.position.set(point.x, y + 0.3, point.z);
                 markers.add(label);
             });
             scene.add(markers);
@@ -2720,6 +2736,7 @@
                     <div class="panel-header">Nhà xưởng &amp; Cấu hình</div>
                     <div class="panel-body">
                         <div class="form-row"><button class="btn btn-secondary" id="desktopAddFloor">Thêm tầng</button><button class="btn btn-danger" id="desktopRemoveFloor">Xóa tầng cuối</button></div>
+                        <div class="form-row"><button class="btn btn-secondary" id="desktopAddElevator">Thêm thang máy</button></div>
                         <div class="form-row"><button class="btn btn-secondary" id="desktopApplyFloors">Áp dụng sàn/thang</button></div>
                         <div class="form-row checkbox-row"><label><input type="checkbox" id="desktopElevatorExit" /> Path: cuối = vào thang</label></div>
                         <div class="form-row"><label class="form-label">Path tầng tiếp (index)</label><input type="number" id="desktopNextPathIndex" min="0" value="0" style="width:100%;padding:6px;background:#3c3c3c;border:1px solid #555;color:#d4d4d4;" /></div>
@@ -2755,7 +2772,7 @@
             });
             document.getElementById('desktopAgvSpeed').addEventListener('input', e => { config.agvSpeed = parseFloat(e.target.value); document.getElementById('desktopAgvSpeedVal').textContent = e.target.value; agvs.forEach(agv => agv.speed = config.agvSpeed * 0.0005); });
             document.getElementById('desktopAddAGV').addEventListener('click', () => config.addAGV());
-            document.getElementById('desktopFloorSelect').addEventListener('change', e => { config.currentFloorId = e.target.value; if (isCreatingPath) updateNewPathPreview(); });
+            document.getElementById('desktopFloorSelect').addEventListener('change', e => { config.currentFloorId = e.target.value; if (isCreatingPath) updateTemporaryPathPointsElevation(); });
             document.getElementById('desktopPathType').addEventListener('change', e => { newPathType = e.target.value; config.newPathType = e.target.value; if (isCreatingPath && newPathWaypoints.length >= 2) updateNewPathPreview(); });
             document.getElementById('desktopStartPath').addEventListener('click', () => { config.isCreatingPath = true; newPathType = config.newPathType; startCreatingPath(); });
             document.getElementById('desktopFinishPath').addEventListener('click', () => finishCreatingPath());
@@ -2764,7 +2781,7 @@
             document.getElementById('desktopRemoveAGVModel').addEventListener('click', () => config.removeAGVModel());
             document.getElementById('desktopAddFloor').addEventListener('click', () => {
                 const n = building.floors.length + 1;
-                building.floors.push({ id: 'F' + n, name: 'Tầng ' + n, elevation: 10 * (n - 1), width: 200, depth: 200 });
+                building.floors.push({ id: 'F' + n, name: 'Tầng ' + n, elevation: 50 * (n - 1), width: 200, depth: 200 });
                 rebuildFloorsAndElevators();
                 refreshDesktopUI();
             });
@@ -2773,6 +2790,17 @@
                 const last = building.floors[building.floors.length - 1];
                 if (pathDefinitions.some(p => p.floorId === last.id) || agvs.some(a => a.currentFloorId === last.id)) { alert('Tầng đang được path/AGV sử dụng'); return; }
                 building.floors.pop();
+                rebuildFloorsAndElevators();
+                refreshDesktopUI();
+            });
+            document.getElementById('desktopAddElevator').addEventListener('click', () => {
+                if (building.floors.length === 0) { alert('Cần ít nhất 1 tầng trước khi thêm thang máy'); return; }
+                const n = elevators.length + 1;
+                const floorIds = building.floors.map(f => f.id);
+                const positions = {};
+                const offsetX = 15 * (elevators.length);
+                floorIds.forEach(fid => { positions[fid] = { x: offsetX, z: 0 }; });
+                elevators.push({ id: 'E' + n, floorIds: floorIds, positions: positions });
                 rebuildFloorsAndElevators();
                 refreshDesktopUI();
             });
@@ -2912,6 +2940,7 @@
                 return;
             }
             const path = pathDefinitions[pathIndex];
+            const colors = [0x4CAF50, 0x2196F3, 0xFF9800, 0x9C27B0, 0x00BCD4, 0xE91E63];
             const color = colors[Math.floor(Math.random() * colors.length)];
             const id = `AGV-${String(agvs.length + 1).padStart(3, '0')}`;
             agvs.push(new AGV(id, path, color));
@@ -2931,7 +2960,7 @@
 
         // Handle window resize (aspect theo vùng 3D để không bị cắt)
         window.addEventListener('resize', () => {
-            const vs = getViewSize();
+            const vs = Helpers.getViewSize();
             const aspect = vs.w / Math.max(1, vs.h);
             
             if (isOrthographic) {
